@@ -160,6 +160,16 @@ CRITICAL RULES:
 - For EXECUTE_CODE, specify language first, then code
 - If a task requires multiple steps, use tools for each step
 - Verify results by using READ_FILE or LIST_FILES after creating/modifying files
+- If a tool fails, try a different approach or retry with corrected parameters
+- Always check if files/directories exist before trying to read/delete them
+- Use LIST_FILES to explore directory structure before operations
+
+ERROR HANDLING:
+- If READ_FILE fails, try LIST_FILES first to check if the file exists
+- If WRITE_FILE fails, try CREATE_DIRECTORY for the parent directory first
+- If RUN_COMMAND fails, try a simpler version of the command
+- If EXECUTE_CODE fails, check the syntax and try again
+- Always verify your work by reading back files or listing directories
 
 EXAMPLES:
 TOOL: READ_FILE /path/to/file.txt
@@ -173,11 +183,20 @@ TOOL: EXECUTE_CODE python print("Hello World")
 TASK COMPLETION STRATEGY:
 1. Break complex tasks into steps
 2. Use appropriate tools for each step
-3. Verify results with READ_FILE or LIST_FILES
-4. Continue until the task is fully completed
-5. Provide a summary of what was accomplished
+3. If a step fails, try alternative approaches
+4. Verify results with READ_FILE or LIST_FILES
+5. Continue until the task is fully completed
+6. Provide a summary of what was accomplished
 
-Remember: You have access to real tools - USE THEM to actually complete tasks, don't just describe what you would do."#.to_string()
+WORKFLOW FOR COMPLEX TASKS:
+1. LIST_FILES to understand current directory structure
+2. CREATE_DIRECTORY if needed
+3. WRITE_FILE to create files
+4. READ_FILE to verify file contents
+5. RUN_COMMAND or EXECUTE_CODE to execute code
+6. LIST_FILES again to confirm everything is in place
+
+Remember: You have access to real tools - USE THEM to actually complete tasks, don't just describe what you would do. If something fails, try a different approach!"#.to_string()
     }
 
     fn parse_tool_call(&self, response: &str) -> Option<Tool> {
@@ -246,7 +265,7 @@ Remember: You have access to real tools - USE THEM to actually complete tasks, d
 
         let mut all_tool_logs = Vec::new();
         let mut attempts = 0;
-        const MAX_ATTEMPTS: usize = 5;
+        const MAX_ATTEMPTS: usize = 8; // Increased for better error recovery
 
         loop {
             attempts += 1;
@@ -271,8 +290,18 @@ Remember: You have access to real tools - USE THEM to actually complete tasks, d
                 tool_logs.push(format!("🔧 Attempt {}: Executing {}", attempts, tool_name));
                 
                 // Execute the tool
-                let tool_result = tool.execute()?;
-                tool_logs.push(format!("✅ Result: {}", tool_result));
+                let tool_result = match tool.execute() {
+                    Ok(result) => {
+                        tool_logs.push(format!("✅ Success: {}", result));
+                        result
+                    }
+                    Err(e) => {
+                        let error_msg = format!("❌ Error: {}", e);
+                        tool_logs.push(error_msg.clone());
+                        // Add error context to help the model understand what went wrong
+                        format!("Tool failed: {}. Please try a different approach or check if the path/command is correct.", e)
+                    }
+                };
                 all_tool_logs.extend(tool_logs);
                 
                 // Add assistant message and tool result to conversation
