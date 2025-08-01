@@ -9,7 +9,7 @@ impl App {
         Self {
             user_input: String::new(),
             conversation: Vec::new(),
-            status_message: "Press 'q' to quit".to_string(),
+            status_message: "Type in /quit to exit".to_string(),
         }
     }
 }

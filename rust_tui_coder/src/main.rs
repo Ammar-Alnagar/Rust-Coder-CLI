@@ -62,7 +62,6 @@ async fn run_app<B: Backend>(
 
         if let Event::Key(key) = event::read()? {
             match key.code {
-                KeyCode::Char('q') => return Ok(()),
                 KeyCode::Char(c) => {
                     app.user_input.push(c);
                 }
@@ -71,6 +70,12 @@ async fn run_app<B: Backend>(
                 }
                 KeyCode::Enter => {
                     let user_input = app.user_input.drain(..).collect::<String>();
+                    
+                    // Check for quit command
+                    if user_input.trim() == "/quit" {
+                        return Ok(());
+                    }
+                    
                     app.conversation.push(format!("User: {}", user_input));
 
                     app.status_message = "Thinking...".to_string();
