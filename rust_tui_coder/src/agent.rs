@@ -3,7 +3,7 @@ use std::fs;
 use std::io;
 use std::process::Command;
 use std::path::Path;
-use crate::llm::{self, Message, LlmError};
+use crate::llm::{self, Message};
 use crate::config::LlmConfig;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -127,37 +127,6 @@ edition = "2021"
                 }
             }
         }
-    }
-}
-
-#[derive(Debug)]
-pub enum AgentError {
-    LlmError(LlmError),
-    ToolExecutionError(io::Error),
-    ParseError(String),
-}
-
-impl std::fmt::Display for AgentError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            AgentError::LlmError(e) => write!(f, "LLM error: {}", e),
-            AgentError::ToolExecutionError(e) => write!(f, "Tool execution error: {}", e),
-            AgentError::ParseError(e) => write!(f, "Parse error: {}", e),
-        }
-    }
-}
-
-impl std::error::Error for AgentError {}
-
-impl From<LlmError> for AgentError {
-    fn from(err: LlmError) -> Self {
-        AgentError::LlmError(err)
-    }
-}
-
-impl From<io::Error> for AgentError {
-    fn from(err: io::Error) -> Self {
-        AgentError::ToolExecutionError(err)
     }
 }
 

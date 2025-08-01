@@ -22,16 +22,4 @@ impl App {
     pub fn add_tool_log(&mut self, log: String) {
         self.tool_logs.push(log);
     }
-
-    pub fn start_tool_execution(&mut self, tool_name: &str) {
-        self.is_executing_tool = true;
-        self.current_tool = tool_name.to_string();
-        self.status_message = format!("Executing: {}", tool_name);
-    }
-
-    pub fn end_tool_execution(&mut self) {
-        self.is_executing_tool = false;
-        self.current_tool.clear();
-        self.status_message = "Done.".to_string();
-    }
 }

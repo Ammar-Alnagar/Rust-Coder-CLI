@@ -51,21 +51,6 @@ struct Choice {
     message: Message,
 }
 
-pub async fn ask_llm(config: &LlmConfig, prompt: String) -> Result<String, LlmError> {
-    let messages = vec![
-        Message {
-            role: "system".to_string(),
-            content: "You are a helpful assistant.".to_string(),
-        },
-        Message {
-            role: "user".to_string(),
-            content: prompt,
-        },
-    ];
-    
-    ask_llm_with_messages(config, &messages).await
-}
-
 pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> Result<String, LlmError> {
     let client = Client::new();
 
