@@ -1,5 +1,5 @@
 # Configuration for the LLM API
 [llm]
-api_key = "YOUR_API_KEY_HERE"
-api_base_url = "https://api.openai.com/v1"
-model_name = "gpt-4"
+api_key = "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"
+api_base_url = "https://openrouter.ai/api/v1"
+model_name = "openrouter/horizon-alpha"
