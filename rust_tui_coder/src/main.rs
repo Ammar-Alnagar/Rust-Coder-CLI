@@ -71,18 +71,17 @@ async fn run_app<B: Backend>(
                 }
                 KeyCode::Enter => {
                     let user_input = app.user_input.drain(..).collect::<String>();
-                    app.conversation.push(format!("User: {}", user_input));
 
                     app.status_message = "Thinking...".to_string();
                     terminal.draw(|f| ui::ui(f, &app))?;
 
                     match agent.run(&config.llm, user_input).await {
                         Ok(response) => {
-                            app.conversation.push(format!("Agent: {}", response));
+                            app.conversation.push(llm::Message{role: "assistant".to_string(), content: response});
                             app.status_message = "Done.".to_string();
                         }
                         Err(e) => {
-                            app.conversation.push(format!("Error: {}", e));
+                            app.conversation.push(llm::Message{role: "assistant".to_string(), content: format!("Error: {}", e)});
                             app.status_message = "Error.".to_string();
                         }
                     }

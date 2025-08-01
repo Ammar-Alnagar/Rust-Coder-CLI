@@ -19,8 +19,9 @@ pub fn ui(f: &mut Frame, app: &App) {
         )
         .split(f.size());
 
+    let conversation_text: Vec<String> = app.conversation.iter().map(|m| format!("{}: {}", m.role, m.content)).collect();
     let conversation_block = Block::default().title("Conversation").borders(Borders::ALL);
-    let conversation = Paragraph::new(app.conversation.join("\n"))
+    let conversation = Paragraph::new(conversation_text.join("\n"))
         .block(conversation_block);
     f.render_widget(conversation, chunks[0]);
 

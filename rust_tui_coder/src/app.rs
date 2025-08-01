@@ -1,6 +1,8 @@
+use crate::llm::Message;
+
 pub struct App {
     pub user_input: String,
-    pub conversation: Vec<String>,
+    pub conversation: Vec<Message>,
     pub status_message: String,
 }
 

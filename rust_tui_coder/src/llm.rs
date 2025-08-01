@@ -24,19 +24,8 @@ struct Choice {
     message: Message,
 }
 
-pub async fn ask_llm(config: &LlmConfig, prompt: String) -> Result<String, reqwest::Error> {
+pub async fn ask_llm(config: &LlmConfig, messages: Vec<Message>) -> Result<String, reqwest::Error> {
     let client = Client::new();
-
-    let messages = vec![
-        Message {
-            role: "system".to_string(),
-            content: "You are a helpful assistant.".to_string(),
-        },
-        Message {
-            role: "user".to_string(),
-            content: prompt,
-        },
-    ];
 
     let request_body = ChatCompletionRequest {
         model: config.model_name.clone(),
