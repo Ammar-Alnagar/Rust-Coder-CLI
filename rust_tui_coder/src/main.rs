@@ -22,17 +22,6 @@ use config::Config;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load configuration
     let config = Config::from_file("config.toml")?;
-    
-    // Debug: Print config info (masking the API key)
-    let masked_key = if config.llm.api_key.len() > 8 {
-        format!("{}...{}", &config.llm.api_key[..4], &config.llm.api_key[config.llm.api_key.len()-4..])
-    } else {
-        "***".to_string()
-    };
-    eprintln!("Config loaded successfully:");
-    eprintln!("  API Base URL: {}", config.llm.api_base_url);
-    eprintln!("  Model: {}", config.llm.model_name);
-    eprintln!("  API Key: {}", masked_key);
 
     // setup terminal
     enable_raw_mode()?;

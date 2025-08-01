@@ -70,11 +70,6 @@ pub async fn ask_llm(config: &LlmConfig, prompt: String) -> Result<String, LlmEr
         messages,
     };
 
-    // Debug: Print request details
-    eprintln!("Making request to: {}/chat/completions", config.api_base_url);
-    eprintln!("Model: {}", config.model_name);
-    eprintln!("API Key (first 4 chars): {}", &config.api_key[..4.min(config.api_key.len())]);
-
     // First, get the raw response to debug
     let response = client
         .post(&format!("{}/chat/completions", config.api_base_url))
@@ -87,13 +82,11 @@ pub async fn ask_llm(config: &LlmConfig, prompt: String) -> Result<String, LlmEr
     let status = response.status();
     if !status.is_success() {
         let error_text = response.text().await?;
-        eprintln!("API Error: Status {} - {}", status, error_text);
         return Err(LlmError::ApiError(format!("HTTP {}: {}", status, error_text)));
     }
 
     // Get the raw response text for debugging
     let response_text = response.text().await?;
-    eprintln!("Raw API Response: {}", response_text);
 
     // Try to parse the response
     match serde_json::from_str::<ChatCompletionResponse>(&response_text) {
@@ -105,8 +98,6 @@ pub async fn ask_llm(config: &LlmConfig, prompt: String) -> Result<String, LlmEr
             }
         }
         Err(e) => {
-            eprintln!("Failed to parse response: {}", e);
-            eprintln!("Response was: {}", response_text);
             Err(LlmError::ParseError(format!("Failed to parse API response: {}", e)))
         }
     }
