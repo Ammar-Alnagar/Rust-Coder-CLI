@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
 use std::process::Command;
-use crate::llm::{self, Message};
+use crate::llm::{self, Message, LlmError};
 use crate::config::LlmConfig;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -52,7 +52,7 @@ impl Agent {
     pub async fn run(&mut self, config: &LlmConfig, user_prompt: String) -> Result<String, Box<dyn std::error::Error>> {
         // For now, just a simple call to the LLM.
         // The logic for tool parsing will be added later.
-        let response = llm::ask_llm(config, user_prompt).await?;
+        let response = llm::ask_llm(config, user_prompt).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
         Ok(response)
     }
 }
