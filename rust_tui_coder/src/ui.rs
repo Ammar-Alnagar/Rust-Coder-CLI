@@ -1,6 +1,8 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    style::{Color, Style, Stylize},
+    text::{Span, Line},
     Frame,
 };
 use crate::app::App;
@@ -20,16 +22,34 @@ pub fn ui(f: &mut Frame, app: &App) {
         )
         .split(f.size());
 
-    // Create conversation text with proper formatting
-    let conversation_text = app.conversation.join("\n\n");
+    // Create conversation text with proper formatting and colors
+    let mut conversation_lines = Vec::new();
+    for message in &app.conversation {
+        if message.starts_with("User: ") {
+            let content = &message[6..]; // Remove "User: " prefix
+            conversation_lines.push(Line::from(vec![
+                Span::styled("User: ", Style::default().fg(Color::Blue).bold()),
+                Span::styled(content, Style::default().fg(Color::White)),
+            ]));
+        } else if message.starts_with("Agent: ") {
+            let content = &message[7..]; // Remove "Agent: " prefix
+            conversation_lines.push(Line::from(vec![
+                Span::styled("Agent: ", Style::default().fg(Color::Green).bold()),
+                Span::styled(content, Style::default().fg(Color::White)),
+            ]));
+        } else {
+            conversation_lines.push(Line::from(vec![
+                Span::styled(message, Style::default().fg(Color::Yellow)),
+            ]));
+        }
+    }
     
     // Calculate scroll position to show the latest messages
-    let conversation_lines: Vec<&str> = conversation_text.lines().collect();
     let max_scroll = conversation_lines.len().saturating_sub(chunks[0].height as usize);
     let scroll_position = max_scroll;
 
     let conversation_block = Block::default().title("Conversation").borders(Borders::ALL);
-    let conversation = Paragraph::new(conversation_text.clone())
+    let conversation = Paragraph::new(conversation_lines.clone())
         .block(conversation_block)
         .scroll((scroll_position as u16, 0));
     f.render_widget(conversation, chunks[0]);
