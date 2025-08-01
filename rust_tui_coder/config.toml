@@ -1,5 +1,5 @@
 # Configuration for the LLM API
 [llm]
-api_key = "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"
+api_key = "sk"
 api_base_url = "https://openrouter.ai/api/v1"
 model_name = "openrouter/horizon-alpha"
