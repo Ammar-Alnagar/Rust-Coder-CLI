@@ -52,8 +52,6 @@ struct Choice {
 }
 
 pub async fn ask_llm(config: &LlmConfig, prompt: String) -> Result<String, LlmError> {
-    let client = Client::new();
-
     let messages = vec![
         Message {
             role: "system".to_string(),
@@ -64,10 +62,16 @@ pub async fn ask_llm(config: &LlmConfig, prompt: String) -> Result<String, LlmEr
             content: prompt,
         },
     ];
+    
+    ask_llm_with_messages(config, &messages).await
+}
+
+pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> Result<String, LlmError> {
+    let client = Client::new();
 
     let request_body = ChatCompletionRequest {
         model: config.model_name.clone(),
-        messages,
+        messages: messages.to_vec(),
     };
 
     // First, get the raw response to debug

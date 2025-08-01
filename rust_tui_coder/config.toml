@@ -1,5 +1,5 @@
 # Configuration for the LLM API
 [llm]
-api_key = "sk"
-api_base_url = "https://openrouter.ai/api/v1"
-model_name = "openrouter/horizon-alpha"
+api_key = "cpk_59f8f6d19f9f484780cd464890946135.9d8cdbf0dd975674b160f87c17eb13d9.gq6u1JO5UYi7WgMJbEOrpzltlqfooo8z"
+api_base_url = "https://llm.chutes.ai/v1"
+model_name = "zai-org/GLM-4.5-Air"
