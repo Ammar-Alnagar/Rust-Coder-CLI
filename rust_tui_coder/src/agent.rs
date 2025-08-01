@@ -243,7 +243,7 @@ After using a tool, explain what you did and provide the results to the user."#.
         None
     }
 
-    pub async fn run(&mut self, config: &LlmConfig, user_prompt: String) -> Result<String, Box<dyn std::error::Error>> {
+    pub async fn run(&mut self, config: &LlmConfig, user_prompt: String) -> Result<(String, Vec<String>), Box<dyn std::error::Error>> {
         // Add system message if this is the first interaction
         if self.messages.is_empty() {
             self.messages.push(Message {
@@ -263,8 +263,23 @@ After using a tool, explain what you did and provide the results to the user."#.
 
         // Check if response contains a tool call
         if let Some(tool) = self.parse_tool_call(&response) {
+            let mut tool_logs = Vec::new();
+            
+            // Log the tool execution
+            let tool_name = match &tool {
+                Tool::ReadFile { path } => format!("READ_FILE {}", path),
+                Tool::WriteFile { path, content: _ } => format!("WRITE_FILE {}", path),
+                Tool::RunCommand { command } => format!("RUN_COMMAND {}", command),
+                Tool::ListFiles { path } => format!("LIST_FILES {}", path),
+                Tool::CreateDirectory { path } => format!("CREATE_DIRECTORY {}", path),
+                Tool::DeleteFile { path } => format!("DELETE_FILE {}", path),
+                Tool::ExecuteCode { language, code: _ } => format!("EXECUTE_CODE {}", language),
+            };
+            tool_logs.push(format!("🔧 Executing: {}", tool_name));
+            
             // Execute the tool
             let tool_result = tool.execute()?;
+            tool_logs.push(format!("✅ Result: {}", tool_result));
             
             // Add assistant message and tool result to conversation
             self.messages.push(Message {
@@ -284,14 +299,14 @@ After using a tool, explain what you did and provide the results to the user."#.
                 content: final_response.clone(),
             });
             
-            Ok(final_response)
+            Ok((final_response, tool_logs))
         } else {
             // No tool call, just return the response
             self.messages.push(Message {
                 role: "assistant".to_string(),
                 content: response.clone(),
             });
-            Ok(response)
+            Ok((response, Vec::new()))
         }
     }
 }

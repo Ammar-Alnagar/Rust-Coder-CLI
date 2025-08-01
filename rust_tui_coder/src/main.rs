@@ -82,7 +82,11 @@ async fn run_app<B: Backend>(
                     terminal.draw(|f| ui::ui(f, &app))?;
 
                     match agent.run(&config.llm, user_input).await {
-                        Ok(response) => {
+                        Ok((response, tool_logs)) => {
+                            // Add tool logs to the app
+                            for log in tool_logs {
+                                app.add_tool_log(log);
+                            }
                             app.conversation.push(format!("Agent: {}", response));
                             app.status_message = "Done.".to_string();
                         }
