@@ -4,7 +4,3 @@ api_key = "sk-or-v1-f87a10f0c0e4779dcc45c5363dd75b28131dfdcd1da24c1fbb28fc82c25c
 api_base_url = "https://openrouter.ai/api/v1"
 model_name = "moonshotai/kimi-k2:free"
 
-
-#api_key = "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"
-#api_base_url = "https://api.groq.com/openai/v1"
-#model_name = "moonshotai/kimi-k2-instruct"
