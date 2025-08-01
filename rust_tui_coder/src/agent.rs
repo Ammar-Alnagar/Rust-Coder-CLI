@@ -142,29 +142,42 @@ impl Agent {
     }
 
     fn get_system_prompt() -> String {
-        r#"You are a helpful AI assistant with access to various tools. You can:
+        r#"You are a helpful AI assistant with access to various tools. You MUST use tools to complete tasks - do not just describe what you would do.
 
-1. READ_FILE: Read the contents of a file
-2. WRITE_FILE: Create or modify a file
-3. RUN_COMMAND: Execute shell commands
-4. LIST_FILES: List files in a directory
-5. CREATE_DIRECTORY: Create directories
-6. DELETE_FILE: Delete files or directories
-7. EXECUTE_CODE: Execute code in Python, Bash, or Rust
+AVAILABLE TOOLS:
+1. READ_FILE <path> - Read the contents of a file
+2. WRITE_FILE <path> <content> - Create or modify a file with the specified content
+3. RUN_COMMAND <command> - Execute shell commands
+4. LIST_FILES <path> - List files in a directory
+5. CREATE_DIRECTORY <path> - Create directories
+6. DELETE_FILE <path> - Delete files or directories
+7. EXECUTE_CODE <language> <code> - Execute code in Python, Bash, or Rust
 
-When you need to use a tool, respond with the tool name and parameters in this format:
-TOOL: <tool_name> <parameters>
+CRITICAL RULES:
+- ALWAYS use tools to complete tasks, never just describe actions
+- Use the exact format: TOOL: <tool_name> <parameters>
+- For WRITE_FILE, separate path and content with a space
+- For EXECUTE_CODE, specify language first, then code
+- If a task requires multiple steps, use tools for each step
+- Verify results by using READ_FILE or LIST_FILES after creating/modifying files
 
-Examples:
+EXAMPLES:
 TOOL: READ_FILE /path/to/file.txt
-TOOL: WRITE_FILE /path/to/file.txt content here
+TOOL: WRITE_FILE /path/to/file.txt This is the file content
 TOOL: RUN_COMMAND ls -la
 TOOL: LIST_FILES /path/to/directory
 TOOL: CREATE_DIRECTORY /path/to/new/directory
 TOOL: DELETE_FILE /path/to/file.txt
 TOOL: EXECUTE_CODE python print("Hello World")
 
-After using a tool, explain what you did and provide the results to the user."#.to_string()
+TASK COMPLETION STRATEGY:
+1. Break complex tasks into steps
+2. Use appropriate tools for each step
+3. Verify results with READ_FILE or LIST_FILES
+4. Continue until the task is fully completed
+5. Provide a summary of what was accomplished
+
+Remember: You have access to real tools - USE THEM to actually complete tasks, don't just describe what you would do."#.to_string()
     }
 
     fn parse_tool_call(&self, response: &str) -> Option<Tool> {
@@ -179,11 +192,13 @@ After using a tool, explain what you did and provide the results to the user."#.
                     return match tool_name {
                         "READ_FILE" => Some(Tool::ReadFile { path: params.to_string() }),
                         "WRITE_FILE" => {
-                            let file_parts: Vec<&str> = params.splitn(2, ' ').collect();
-                            if file_parts.len() >= 2 {
+                            // Find the first space to separate path from content
+                            if let Some(space_pos) = params.find(' ') {
+                                let path = &params[..space_pos];
+                                let content = &params[space_pos + 1..];
                                 Some(Tool::WriteFile { 
-                                    path: file_parts[0].to_string(), 
-                                    content: file_parts[1].to_string() 
+                                    path: path.to_string(), 
+                                    content: content.to_string() 
                                 })
                             } else {
                                 None
@@ -194,11 +209,13 @@ After using a tool, explain what you did and provide the results to the user."#.
                         "CREATE_DIRECTORY" => Some(Tool::CreateDirectory { path: params.to_string() }),
                         "DELETE_FILE" => Some(Tool::DeleteFile { path: params.to_string() }),
                         "EXECUTE_CODE" => {
-                            let code_parts: Vec<&str> = params.splitn(2, ' ').collect();
-                            if code_parts.len() >= 2 {
+                            // Find the first space to separate language from code
+                            if let Some(space_pos) = params.find(' ') {
+                                let language = &params[..space_pos];
+                                let code = &params[space_pos + 1..];
                                 Some(Tool::ExecuteCode { 
-                                    language: code_parts[0].to_string(), 
-                                    code: code_parts[1].to_string() 
+                                    language: language.to_string(), 
+                                    code: code.to_string() 
                                 })
                             } else {
                                 None
@@ -227,55 +244,76 @@ After using a tool, explain what you did and provide the results to the user."#.
             content: user_prompt.clone(),
         });
 
-        // Get response from LLM
-        let response = llm::ask_llm_with_messages(config, &self.messages).await?;
+        let mut all_tool_logs = Vec::new();
+        let mut attempts = 0;
+        const MAX_ATTEMPTS: usize = 5;
 
-        // Check if response contains a tool call
-        if let Some(tool) = self.parse_tool_call(&response) {
-            let mut tool_logs = Vec::new();
+        loop {
+            attempts += 1;
             
-            // Log the tool execution
-            let tool_name = match &tool {
-                Tool::ReadFile { path } => format!("READ_FILE {}", path),
-                Tool::WriteFile { path, content: _ } => format!("WRITE_FILE {}", path),
-                Tool::RunCommand { command } => format!("RUN_COMMAND {}", command),
-                Tool::ListFiles { path } => format!("LIST_FILES {}", path),
-                Tool::CreateDirectory { path } => format!("CREATE_DIRECTORY {}", path),
-                Tool::DeleteFile { path } => format!("DELETE_FILE {}", path),
-                Tool::ExecuteCode { language, code: _ } => format!("EXECUTE_CODE {}", language),
-            };
-            tool_logs.push(format!("🔧 Executing: {}", tool_name));
-            
-            // Execute the tool
-            let tool_result = tool.execute()?;
-            tool_logs.push(format!("✅ Result: {}", tool_result));
-            
-            // Add assistant message and tool result to conversation
-            self.messages.push(Message {
-                role: "assistant".to_string(),
-                content: response,
-            });
-            
-            self.messages.push(Message {
-                role: "user".to_string(),
-                content: format!("Tool result: {}", tool_result),
-            });
+            // Get response from LLM
+            let response = llm::ask_llm_with_messages(config, &self.messages).await?;
 
-            // Get final response from LLM
-            let final_response = llm::ask_llm_with_messages(config, &self.messages).await?;
-            self.messages.push(Message {
-                role: "assistant".to_string(),
-                content: final_response.clone(),
-            });
-            
-            Ok((final_response, tool_logs))
-        } else {
-            // No tool call, just return the response
-            self.messages.push(Message {
-                role: "assistant".to_string(),
-                content: response.clone(),
-            });
-            Ok((response, Vec::new()))
+            // Check if response contains a tool call
+            if let Some(tool) = self.parse_tool_call(&response) {
+                let mut tool_logs = Vec::new();
+                
+                // Log the tool execution
+                let tool_name = match &tool {
+                    Tool::ReadFile { path } => format!("READ_FILE {}", path),
+                    Tool::WriteFile { path, content: _ } => format!("WRITE_FILE {}", path),
+                    Tool::RunCommand { command } => format!("RUN_COMMAND {}", command),
+                    Tool::ListFiles { path } => format!("LIST_FILES {}", path),
+                    Tool::CreateDirectory { path } => format!("CREATE_DIRECTORY {}", path),
+                    Tool::DeleteFile { path } => format!("DELETE_FILE {}", path),
+                    Tool::ExecuteCode { language, code: _ } => format!("EXECUTE_CODE {}", language),
+                };
+                tool_logs.push(format!("🔧 Attempt {}: Executing {}", attempts, tool_name));
+                
+                // Execute the tool
+                let tool_result = tool.execute()?;
+                tool_logs.push(format!("✅ Result: {}", tool_result));
+                all_tool_logs.extend(tool_logs);
+                
+                // Add assistant message and tool result to conversation
+                self.messages.push(Message {
+                    role: "assistant".to_string(),
+                    content: response,
+                });
+                
+                self.messages.push(Message {
+                    role: "user".to_string(),
+                    content: format!("Tool result: {}", tool_result),
+                });
+
+                // Check if we should continue or if the task is complete
+                if attempts >= MAX_ATTEMPTS {
+                    // Get final response after max attempts
+                    let final_response = llm::ask_llm_with_messages(config, &self.messages).await?;
+                    self.messages.push(Message {
+                        role: "assistant".to_string(),
+                        content: final_response.clone(),
+                    });
+                    
+                    all_tool_logs.push(format!("⚠️  Reached maximum attempts ({})", MAX_ATTEMPTS));
+                    return Ok((final_response, all_tool_logs));
+                }
+
+                // Continue to next iteration to see if more tools are needed
+                continue;
+            } else {
+                // No tool call, task appears to be complete
+                self.messages.push(Message {
+                    role: "assistant".to_string(),
+                    content: response.clone(),
+                });
+                
+                if attempts > 1 {
+                    all_tool_logs.push(format!("✅ Task completed after {} attempts", attempts));
+                }
+                
+                return Ok((response, all_tool_logs));
+            }
         }
     }
 }

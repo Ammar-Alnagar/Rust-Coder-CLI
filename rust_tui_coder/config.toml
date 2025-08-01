@@ -1,5 +1,5 @@
 # Configuration for the LLM API
 [llm]
-api_key = "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"
-api_base_url = "https://api.groq.com/openai/v1"
-model_name = "moonshotai/kimi-k2-instruct"
+api_key = "cpk_59f8f6d19f9f484780cd464890946135.9d8cdbf0dd975674b160f87c17eb13d9.gq6u1JO5UYi7WgMJbEOrpzltlqfooo8z"
+api_base_url = "https://llm.chutes.ai/v1"
+model_name = "zai-org/GLM-4.5-FP8"
