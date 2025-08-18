@@ -8,3 +8,13 @@ api_base_url = "http://localhost:11434/v1"
 
 # Set to a concrete model name or use AUTODETECT to pick the first model from /v1/models
 model_name = "AUTODETECT"
+
+
+
+
+# Automation options
+max_attempts = 12
+workspace_root = ""
+shell = "bash"
+post_write_verify = true
+safe_fs = true
