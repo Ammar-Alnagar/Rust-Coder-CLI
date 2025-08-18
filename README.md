@@ -322,3 +322,70 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 ---
 
 **Happy Coding! 🦀✨**
+
+## Updates (2023-11-20)
+
+### New Features
+- **Expanded Toolset**: Added `AppendFile`, `ReplaceInFile`, `SearchText`, `CopyPath`, `MovePath`, and `ListFilesRecursive` for more powerful automation.
+- **JSON Tool Calls**: Supports structured JSON format for tool calls (backward-compatible with legacy format).
+- **Configurable Automation**:
+  - `max_attempts`: Limit retries per task (default: 12).
+  - `workspace_root`: Set a fixed working directory (default: current dir).
+  - `shell`: Default shell for commands (default: `bash`).
+  - `post_write_verify`: Auto-verify file changes (default: `true`).
+- **Improved Prompt**: Now includes workspace context, OS info, and stricter guidance for autonomous task completion.
+- **Model Auto-Detection**: When `model_name = "AUTODETECT"`, the system automatically selects the first available model from your LLM provider's API.
+
+## Architecture
+
+### System Overview
+```mermaid
+graph TD
+    A[User Input] --> B(Agent)
+    B --> C{Tool Call?}
+    C -->|Yes| D[Execute Tool]
+    D --> E[Verify Results]
+    E --> B
+    C -->|No| F[Final Output]
+```
+
+### Tool Execution Flow
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent
+    participant Tools
+    User->>Agent: Task Request
+    Agent->>Tools: TOOL: {"name":"WRITE_FILE", ...}
+    Tools-->>Agent: Success/Failure
+    Agent->>User: Tool Logs + Next Step
+```
+
+### Task Completion Logic
+```mermaid
+flowchart LR
+    Start --> Plan
+    Plan --> Execute
+    Execute --> Verify
+    Verify -->|Success| Done
+    Verify -->|Failure| Adjust
+    Adjust --> Execute
+    Done --> End
+```
+
+### Example: Adding a CLI Command
+```mermaid
+graph LR
+    A[Task: 'Add version flag'] --> B[List Files]
+    B --> C[Find main.rs]
+    C --> D[Edit main.rs]
+    D --> E[Compile]
+    E --> F[Test]
+    F --> G[Done]
+```
+
+These diagrams visualize:
+1. The **end-to-end flow** from input to output
+2. **Tool call mechanics** (JSON/legacy)
+3. The **autonomous loop** (plan → execute → verify)
+4. A **concrete example** of adding a CLI command
