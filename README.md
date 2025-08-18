@@ -263,27 +263,6 @@ cargo test -- --nocapture
 cargo test test_name
 ```
 
-## 🚧 Roadmap & Future Enhancements
-
-### Short Term (v0.2.0)
-- [ ] **Enhanced Tool Parsing**: Robust JSON-based tool invocation
-- [ ] **Configuration Validation**: Better error messages for invalid configs
-- [ ] **Keyboard Shortcuts**: More intuitive navigation and controls
-- [ ] **Session Persistence**: Save and restore conversation history
-
-### Medium Term (v0.3.0)
-- [ ] **Plugin System**: Extensible tool architecture
-- [ ] **Syntax Highlighting**: Code syntax highlighting in conversations
-- [ ] **File Browser**: Interactive file system navigation
-- [ ] **Multi-language Support**: Enhanced code execution for more languages
-
-### Long Term (v1.0.0)
-- [ ] **Local LLM Support**: Integration with Ollama, llama.cpp
-- [ ] **Web Search Integration**: Internet search capabilities
-- [ ] **Git Integration**: Version control operations
-- [ ] **Project Templates**: Quick project scaffolding
-- [ ] **Collaborative Features**: Share sessions and conversations
-
 ## 🤝 Contributing
 
 We welcome contributions! Here's how you can help:
@@ -306,24 +285,11 @@ We welcome contributions! Here's how you can help:
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
 
-- **ratatui team** for the excellent TUI framework
-- **Tokio team** for the async runtime
-- **Rust community** for the amazing ecosystem
-- **OpenAI/Anthropic** for providing powerful LLM APIs
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/ammar-alnagar/rust-tui-coder/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/ammar-alnagar/rust-tui-coder/discussions)
-- **Documentation**: Check the code comments and this README
-
----
 
 **Happy Coding! 🦀✨**
 
-## Updates (2023-11-20)
+## Updates (2025-08-18)
 
 ### New Features
 - **Expanded Toolset**: Added `AppendFile`, `ReplaceInFile`, `SearchText`, `CopyPath`, `MovePath`, and `ListFilesRecursive` for more powerful automation.
