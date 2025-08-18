@@ -1,5 +1,10 @@
 # Configuration for the LLM API
 [llm]
+provider = "openai"
+
 api_key = ""
-api_base_url = ""
-model_name = ""
+
+api_base_url = "http://localhost:11434/v1"
+
+# Set to a concrete model name or use AUTODETECT to pick the first model from /v1/models
+model_name = "AUTODETECT"

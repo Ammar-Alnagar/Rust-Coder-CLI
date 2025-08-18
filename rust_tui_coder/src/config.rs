@@ -9,6 +9,7 @@ pub struct Config {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct LlmConfig {
+    pub provider: Option<String>,
     pub api_key: String,
     pub api_base_url: String,
     pub model_name: String,
