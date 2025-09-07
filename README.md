@@ -1,5 +1,5 @@
-# Rust TUI Coder
-
+# Rust CLI Coder
+![Rust TUI Coder - Tool system demonstration](rust-coder-cli-logo.png)
 A powerful terminal-based coding assistant that combines the convenience of a modern TUI with the intelligence of large language models. Rust TUI Coder provides an interactive environment where you can chat with AI, execute code, manipulate files, and run system commands—all from within a beautifully designed terminal interface.
 
 ## 📸 Screenshots
