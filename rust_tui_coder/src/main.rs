@@ -73,7 +73,21 @@ async fn run_app<B: Backend>(
                     
                     // Check for quit command
                     if user_input.trim() == "/quit" {
+                        // Display usage summary before quitting
+                        let summary = app.get_usage_summary();
+                        app.conversation.push(format!("System: {}", summary));
+                        terminal.draw(|f| ui::ui(f, &app))?;
+
+                        // Give user a moment to see the summary
+                        std::thread::sleep(std::time::Duration::from_secs(2));
                         return Ok(());
+                    }
+
+                    // Check for stats command
+                    if user_input.trim() == "/stats" {
+                        let summary = app.get_usage_summary();
+                        app.conversation.push(format!("System: {}", summary));
+                        continue;
                     }
                     
                     app.conversation.push(format!("User: {}", user_input));
@@ -81,7 +95,7 @@ async fn run_app<B: Backend>(
                     app.status_message = "Thinking...".to_string();
                     terminal.draw(|f| ui::ui(f, &app))?;
 
-                    match agent.run(&config.llm, user_input).await {
+                    match agent.run(&config.llm, user_input, &mut app).await {
                         Ok((response, tool_logs)) => {
                             // Add tool logs to the app
                             for log in tool_logs {

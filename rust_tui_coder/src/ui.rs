@@ -7,34 +7,86 @@ use ratatui::{
 };
 use crate::app::App;
 
-// Helper function to wrap text to fit within a given width
+// Enhanced helper function to wrap text to fit within a given width
 fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
-    let words: Vec<&str> = text.split_whitespace().collect();
+    if max_width == 0 {
+        return vec![text.to_string()];
+    }
+
     let mut lines = Vec::new();
     let mut current_line = String::new();
-    
-    for word in words {
-        if current_line.len() + word.len() + 1 <= max_width {
-            if !current_line.is_empty() {
-                current_line.push(' ');
-            }
-            current_line.push_str(word);
-        } else {
+
+    // Handle empty text
+    if text.trim().is_empty() {
+        return vec![text.to_string()];
+    }
+
+    for line in text.lines() {
+        if line.trim().is_empty() {
+            // Handle empty lines by preserving them
             if !current_line.is_empty() {
                 lines.push(current_line.clone());
+                current_line.clear();
             }
-            current_line = word.to_string();
+            lines.push(String::new());
+            continue;
+        }
+
+        let words: Vec<&str> = line.split_whitespace().collect();
+
+        for word in words {
+            // Handle words longer than max_width by breaking them
+            if word.len() > max_width {
+                if !current_line.is_empty() {
+                    lines.push(current_line.clone());
+                    current_line.clear();
+                }
+                // Break long word into chunks
+                let mut remaining_word = word;
+                while !remaining_word.is_empty() {
+                    let chunk_size = std::cmp::min(max_width, remaining_word.len());
+                    let chunk = &remaining_word[..chunk_size];
+                    lines.push(chunk.to_string());
+                    remaining_word = &remaining_word[chunk_size..];
+                }
+                continue;
+            }
+
+            // Check if word fits on current line
+            let space_needed = if current_line.is_empty() { word.len() } else { current_line.len() + 1 + word.len() };
+
+            if space_needed <= max_width {
+                if !current_line.is_empty() {
+                    current_line.push(' ');
+                }
+                current_line.push_str(word);
+            } else {
+                // Word doesn't fit, start new line
+                if !current_line.is_empty() {
+                    lines.push(current_line.clone());
+                    current_line.clear();
+                }
+                current_line.push_str(word);
+            }
+        }
+
+        // Add the current line if it's not empty
+        if !current_line.is_empty() {
+            lines.push(current_line.clone());
+            current_line.clear();
         }
     }
-    
+
+    // Handle case where we have pending content
     if !current_line.is_empty() {
         lines.push(current_line);
     }
-    
+
+    // Ensure we always return at least the original text if no wrapping occurred
     if lines.is_empty() {
         lines.push(text.to_string());
     }
-    
+
     lines
 }
 
@@ -152,8 +204,19 @@ pub fn ui(f: &mut Frame, app: &App) {
         .position(tool_scroll_position);
     f.render_stateful_widget(tool_scrollbar, chunks[1], &mut tool_scrollbar_state);
 
+    // Enhanced input field with text wrapping
     let input_block = Block::default().title("Input").borders(Borders::ALL);
-    let input = Paragraph::new(app.user_input.as_str())
+    let input_max_width = chunks[2].width.saturating_sub(4) as usize; // Account for borders and padding
+
+    // Wrap the input text for better display
+    let wrapped_input = if app.user_input.is_empty() {
+        vec![String::new()]
+    } else {
+        wrap_text(&app.user_input, input_max_width)
+    };
+
+    let input_text = wrapped_input.join("\n");
+    let input = Paragraph::new(input_text)
         .block(input_block);
     f.render_widget(input, chunks[2]);
 
