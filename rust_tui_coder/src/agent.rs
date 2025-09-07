@@ -1066,7 +1066,7 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
         None
     }
 
-    pub async fn run(&mut self, config: &LlmConfig, user_prompt: String) -> Result<(String, Vec<String>), Box<dyn std::error::Error>> {
+    pub async fn run(&mut self, config: &LlmConfig, user_prompt: String, app: &mut crate::app::App) -> Result<(String, Vec<String>), Box<dyn std::error::Error>> {
         // Add system message if this is the first interaction
         if self.messages.is_empty() {
             self.messages.push(Message {
@@ -1116,7 +1116,9 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
             attempts += 1;
             
             // Get response from LLM
-            let response = llm::ask_llm_with_messages(config, &self.messages).await?;
+            let (response, tokens_used) = llm::ask_llm_with_messages(config, &self.messages).await?;
+            app.increment_tokens(tokens_used);
+            app.increment_requests();
 
             // Check if response contains a tool call
             if let Some(tool) = self.parse_tool_call(&response) {
@@ -1152,6 +1154,7 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                 // Execute the tool
                 let tool_result = match tool.execute() {
                     Ok(result) => {
+                        app.increment_tools_executed();
                         tool_logs.push(format!("✅ Success: {}", result));
                         result
                     }
@@ -1178,12 +1181,15 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                 // Check if we should continue or if the task is complete
                 if attempts >= MAX_ATTEMPTS {
                     // Get final response after max attempts
-                    let final_response = llm::ask_llm_with_messages(config, &self.messages).await?;
+                    let (final_response, final_tokens) = llm::ask_llm_with_messages(config, &self.messages).await?;
+                    app.increment_tokens(final_tokens);
+                    app.increment_requests();
+
                     self.messages.push(Message {
                         role: "assistant".to_string(),
                         content: final_response.clone(),
                     });
-                    
+
                     all_tool_logs.push(format!("⚠️  Reached maximum attempts ({})", MAX_ATTEMPTS));
                     return Ok((final_response, all_tool_logs));
                 }

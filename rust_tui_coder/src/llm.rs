@@ -4,6 +4,21 @@ use crate::config::LlmConfig;
 use std::error::Error;
 use std::fmt;
 
+// Token estimation function (rough approximation based on GPT tokenization)
+pub fn estimate_token_count(text: &str) -> u64 {
+    // Rough approximation: ~4 characters per token for English text
+    // This is not exact but provides a reasonable estimate
+    let char_count = text.chars().count() as f64;
+    let estimated_tokens = (char_count / 4.0).ceil() as u64;
+
+    // Ensure minimum of 1 token for non-empty text
+    if estimated_tokens == 0 && !text.trim().is_empty() {
+        1
+    } else {
+        estimated_tokens
+    }
+}
+
 #[derive(Debug)]
 pub enum LlmError {
     RequestFailed(reqwest::Error),
@@ -61,9 +76,16 @@ struct Choice {
     message: Message,
 }
 
-pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> Result<String, LlmError> {
+pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> Result<(String, u64), LlmError> {
     let client = Client::new();
     let _provider = config.provider.as_deref().unwrap_or("openai");
+
+    // Calculate input tokens
+    let mut input_tokens = 0u64;
+    for message in messages {
+        input_tokens += estimate_token_count(&message.role);
+        input_tokens += estimate_token_count(&message.content);
+    }
 
     // Determine model to use (support AUTODETECT from /models endpoint for OpenAI-compatible APIs)
     let model_to_use = if config.model_name.eq_ignore_ascii_case("AUTODETECT") || config.model_name.trim().is_empty() {
@@ -133,9 +155,15 @@ pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> 
     match serde_json::from_str::<ChatCompletionResponse>(&response_text) {
         Ok(parsed_response) => {
             if let Some(choice) = parsed_response.choices.into_iter().next() {
-                Ok(choice.message.content)
+                let response_content = choice.message.content;
+                let output_tokens = estimate_token_count(&response_content);
+                let total_tokens = input_tokens + output_tokens;
+                Ok((response_content, total_tokens))
             } else {
-                Ok("No response content available.".to_string())
+                let response_content = "No response content available.".to_string();
+                let output_tokens = estimate_token_count(&response_content);
+                let total_tokens = input_tokens + output_tokens;
+                Ok((response_content, total_tokens))
             }
         }
         Err(e) => {
