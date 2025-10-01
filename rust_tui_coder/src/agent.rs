@@ -3,7 +3,10 @@ use std::fs;
 use std::io;
 use std::process::Command;
 use std::path::Path;
-use crate::llm::{self, Message};
+use std::sync::Arc;
+use futures_util::StreamExt;
+use tokio::sync::Mutex;
+use crate::llm::Message;
 use crate::config::LlmConfig;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -683,6 +686,7 @@ edition = "2021"
     }
 }
 
+#[derive(Clone)]
 pub struct Agent {
     messages: Vec<Message>,
 }
@@ -1066,7 +1070,11 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
         None
     }
 
-    pub async fn run(&mut self, config: &LlmConfig, user_prompt: String, app: &mut crate::app::App) -> Result<(String, Vec<String>), Box<dyn std::error::Error>> {
+    pub async fn run(&mut self, config: &LlmConfig, user_prompt: String, app: Arc<Mutex<crate::app::App>>) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
+        self.run_with_streaming(config, user_prompt, app).await
+    }
+
+    pub async fn run_with_streaming(&mut self, config: &LlmConfig, user_prompt: String, app: Arc<Mutex<crate::app::App>>) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
         // Add system message if this is the first interaction
         if self.messages.is_empty() {
             self.messages.push(Message {
@@ -1110,20 +1118,62 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
 
         let mut all_tool_logs = Vec::new();
         let mut attempts = 0;
-        const MAX_ATTEMPTS: usize = 8; // Increased for better error recovery
+        const MAX_ATTEMPTS: usize = 8;
 
         loop {
             attempts += 1;
-            
-            // Get response from LLM
-            let (response, tokens_used) = llm::ask_llm_with_messages(config, &self.messages).await?;
-            app.increment_tokens(tokens_used);
-            app.increment_requests();
+
+            // Start streaming for this response
+            {
+                let mut app_guard = app.lock().await;
+                app_guard.start_streaming();
+            }
+
+            // Create a string to collect the full response
+            let mut full_response = String::new();
+
+            // Get streaming response from LLM
+            let mut stream = match crate::llm::stream_llm_response(config, &self.messages).await {
+                Ok(stream) => stream,
+                Err(e) => {
+                    let mut app_guard = app.lock().await;
+                    app_guard.finish_streaming("Error: Failed to start streaming response".to_string());
+                    return Err(Box::new(e));
+                }
+            };
+
+            // Collect tokens from the stream
+            let mut token_stream = String::new();
+            while let Some(chunk_result) = stream.next().await {
+                match chunk_result {
+                    Ok(chunk) => {
+                        if !chunk.is_empty() {
+                            token_stream.push_str(&chunk);
+                            full_response.push_str(&chunk);
+                            // Update streaming message with brief lock
+                            {
+                                let mut app_guard = app.lock().await;
+                                app_guard.update_streaming_message(&chunk);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        let mut app_guard = app.lock().await;
+                        app_guard.finish_streaming(format!("Error in streaming: {}", e));
+                        return Err(Box::new(e));
+                    }
+                }
+            }
+
+            {
+                let mut app_guard = app.lock().await;
+                app_guard.increment_requests();
+            }
 
             // Check if response contains a tool call
-            if let Some(tool) = self.parse_tool_call(&response) {
+            if let Some(tool) = self.parse_tool_call(&full_response) {
                 let mut tool_logs = Vec::new();
-                
+
                 // Log the tool execution
                 let tool_name = match &tool {
                     Tool::ReadFile { path } => format!("READ_FILE {}", path),
@@ -1150,29 +1200,31 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                     Tool::ClearPlan => "CLEAR_PLAN".to_string(),
                 };
                 tool_logs.push(format!("🔧 Attempt {}: Executing {}", attempts, tool_name));
-                
+
                 // Execute the tool
                 let tool_result = match tool.execute() {
                     Ok(result) => {
-                        app.increment_tools_executed();
+                        {
+                            let mut app_guard = app.lock().await;
+                            app_guard.increment_tools_executed();
+                        }
                         tool_logs.push(format!("✅ Success: {}", result));
                         result
                     }
                     Err(e) => {
                         let error_msg = format!("❌ Error: {}", e);
                         tool_logs.push(error_msg.clone());
-                        // Add error context to help the model understand what went wrong
                         format!("Tool failed: {}. Please try a different approach or check if the path/command is correct.", e)
                     }
                 };
                 all_tool_logs.extend(tool_logs);
-                
+
                 // Add assistant message and tool result to conversation
                 self.messages.push(Message {
                     role: "assistant".to_string(),
-                    content: response,
+                    content: full_response.clone(),
                 });
-                
+
                 self.messages.push(Message {
                     role: "user".to_string(),
                     content: format!("Tool result: {}", tool_result),
@@ -1180,10 +1232,13 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
 
                 // Check if we should continue or if the task is complete
                 if attempts >= MAX_ATTEMPTS {
-                    // Get final response after max attempts
-                    let (final_response, final_tokens) = llm::ask_llm_with_messages(config, &self.messages).await?;
-                    app.increment_tokens(final_tokens);
-                    app.increment_requests();
+                    // Get final response after max attempts (non-streaming for final response)
+                    let (final_response, final_tokens) = crate::llm::ask_llm_with_messages(config, &self.messages).await?;
+                    {
+                        let mut app_guard = app.lock().await;
+                        app_guard.increment_tokens(final_tokens);
+                        app_guard.finish_streaming(final_response.clone());
+                    }
 
                     self.messages.push(Message {
                         role: "assistant".to_string(),
@@ -1200,14 +1255,18 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                 // No tool call, task appears to be complete
                 self.messages.push(Message {
                     role: "assistant".to_string(),
-                    content: response.clone(),
+                    content: full_response.clone(),
                 });
-                
+
                 if attempts > 1 {
                     all_tool_logs.push(format!("✅ Task completed after {} attempts", attempts));
                 }
-                
-                return Ok((response, all_tool_logs));
+
+                {
+                    let mut app_guard = app.lock().await;
+                    app_guard.finish_streaming(full_response.clone());
+                }
+                return Ok((full_response, all_tool_logs));
             }
         }
     }
