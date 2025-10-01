@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::LlmConfig;
 use std::error::Error;
 use std::fmt;
+use futures_util::StreamExt;
 
 // Token estimation function (rough approximation based on GPT tokenization)
 pub fn estimate_token_count(text: &str) -> u64 {
@@ -58,6 +59,7 @@ struct ModelInfo {
 struct ChatCompletionRequest {
     model: String,
     messages: Vec<Message>,
+    stream: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -69,6 +71,21 @@ pub struct Message {
 #[derive(Deserialize, Debug)]
 struct ChatCompletionResponse {
     choices: Vec<Choice>,
+}
+
+#[derive(Deserialize, Debug)]
+struct ChatCompletionStreamResponse {
+    choices: Vec<StreamChoice>,
+}
+
+#[derive(Deserialize, Debug)]
+struct StreamChoice {
+    delta: StreamDelta,
+}
+
+#[derive(Deserialize, Debug)]
+struct StreamDelta {
+    content: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -127,6 +144,7 @@ pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> 
     let request_body = ChatCompletionRequest {
         model: model_to_use,
         messages: messages.to_vec(),
+        stream: false,
     };
 
     // First, get the raw response to debug
@@ -170,4 +188,87 @@ pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> 
             Err(LlmError::ParseError(format!("Failed to parse API response: {}", e)))
         }
     }
+}
+
+/// Stream LLM responses in real-time using Server-Sent Events (SSE)
+pub async fn stream_llm_response(
+    config: &LlmConfig,
+    messages: &[Message],
+) -> Result<impl futures_util::Stream<Item = Result<String, LlmError>>, LlmError> {
+    let client = Client::new();
+
+    // Determine model to use
+    let model_to_use = if config.model_name.eq_ignore_ascii_case("AUTODETECT") || config.model_name.trim().is_empty() {
+        // For streaming, we'll use the provided model or default to a common one
+        "gpt-3.5-turbo".to_string()
+    } else {
+        config.model_name.clone()
+    };
+
+    let request_body = ChatCompletionRequest {
+        model: model_to_use,
+        messages: messages.to_vec(),
+        stream: true,
+    };
+
+    // Create streaming request
+    let mut request = client
+        .post(&format!(
+            "{}/chat/completions",
+            config.api_base_url.trim_end_matches('/')
+        ))
+        .json(&request_body);
+
+    if !config.api_key.is_empty() {
+        request = request.bearer_auth(&config.api_key);
+    }
+
+    let response = request.send().await?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await?;
+        return Err(LlmError::ApiError(format!("HTTP {}: {}", status, error_text)));
+    }
+
+    // Get the response body as a stream
+    let stream = response.bytes_stream();
+
+    // Convert the byte stream to a stream of String chunks
+    let string_stream = stream.map(move |result| {
+        match result {
+            Ok(bytes) => {
+                // Try to parse each chunk as SSE data
+                let chunk_str = String::from_utf8_lossy(&bytes);
+
+                // SSE format: "data: {...}\n\n"
+                if let Some(data_line) = chunk_str
+                    .lines()
+                    .find(|line| line.starts_with("data: "))
+                    .and_then(|line| line.strip_prefix("data: "))
+                {
+                    if data_line == "[DONE]" {
+                        Ok("".to_string()) // End of stream
+                    } else {
+                        // Parse the JSON chunk
+                        match serde_json::from_str::<ChatCompletionStreamResponse>(data_line) {
+                            Ok(parsed) => {
+                                if let Some(choice) = parsed.choices.first() {
+                                    Ok(choice.delta.content.clone().unwrap_or_default())
+                                } else {
+                                    Ok("".to_string())
+                                }
+                            }
+                            Err(_) => Ok("".to_string()), // Skip unparseable chunks
+                        }
+                    }
+                } else {
+                    Ok("".to_string())
+                }
+            }
+            Err(e) => Err(LlmError::RequestFailed(e)),
+        }
+    });
+
+    Ok(string_stream)
 }

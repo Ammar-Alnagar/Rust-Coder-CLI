@@ -9,7 +9,8 @@ edition = "2021"
 ratatui = { version = "0.26.0", features = ["all-widgets"] }
 crossterm = "0.27.0"
 tokio = { version = "1.35.1", features = ["full"] }
-reqwest = { version = "0.11.23", features = ["json"] }
+reqwest = { version = "0.11.23", features = ["json", "stream"] }
 serde = { version = "1.0.195", features = ["derive"] }
 serde_json = "1.0.111"
 toml = "0.8.8"
+futures-util = "0.3.30"

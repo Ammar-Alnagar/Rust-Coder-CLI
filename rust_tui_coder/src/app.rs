@@ -10,6 +10,11 @@ pub struct App {
     pub tokens_used: u64,
     pub total_requests: u64,
     pub total_tools_executed: u64,
+    // Scrolling and streaming state
+    pub conversation_scroll_position: usize,
+    pub tool_logs_scroll_position: usize,
+    pub is_streaming: bool,
+    pub current_streaming_message: String,
 }
 
 impl App {
@@ -17,7 +22,7 @@ impl App {
         Self {
             user_input: String::new(),
             conversation: Vec::new(),
-            status_message: "Commands: /quit (exit), /stats (usage stats)".to_string(),
+            status_message: "Commands: /quit (exit), /stats (usage stats), ↑↓ (scroll conversation)".to_string(),
             tool_logs: Vec::new(),
             is_executing_tool: false,
             current_tool: String::new(),
@@ -26,6 +31,11 @@ impl App {
             tokens_used: 0,
             total_requests: 0,
             total_tools_executed: 0,
+            // Initialize scrolling and streaming state
+            conversation_scroll_position: 0,
+            tool_logs_scroll_position: 0,
+            is_streaming: false,
+            current_streaming_message: String::new(),
         }
     }
 
@@ -76,4 +86,49 @@ impl App {
             }
         )
     }
+
+    // Scroll management methods
+    pub fn scroll_conversation_up(&mut self) {
+        if self.conversation_scroll_position > 0 {
+            self.conversation_scroll_position -= 1;
+        }
+    }
+
+    pub fn scroll_conversation_down(&mut self) {
+        // Don't increment if we're already at or near max (prevent overflow)
+        if self.conversation_scroll_position < usize::MAX - 1 {
+            self.conversation_scroll_position += 1;
+        }
+    }
+
+    pub fn scroll_conversation_to_top(&mut self) {
+        self.conversation_scroll_position = 0;
+    }
+
+    pub fn scroll_conversation_to_bottom(&mut self) {
+        self.conversation_scroll_position = usize::MAX; // Set to max, will be clamped in UI
+    }
+
+
+    // Streaming state management
+    pub fn start_streaming(&mut self) {
+        self.is_streaming = true;
+        self.current_streaming_message = String::new();
+        self.status_message = "🤔 Thinking... (streaming response)".to_string();
+    }
+
+    pub fn update_streaming_message(&mut self, new_content: &str) {
+        self.current_streaming_message.push_str(new_content);
+    }
+
+    pub fn finish_streaming(&mut self, final_message: String) {
+        if !self.current_streaming_message.is_empty() {
+            self.conversation.push(format!("Agent: {}", final_message));
+        }
+        self.is_streaming = false;
+        self.current_streaming_message = String::new();
+        self.status_message = "✅ Done.".to_string();
+        self.scroll_conversation_to_bottom();
+    }
+
 }
