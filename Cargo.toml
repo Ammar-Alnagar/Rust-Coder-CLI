@@ -1,0 +1,33 @@
+[package]
+name = "rust_tui_coder"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+description = "An AI-powered terminal-based coding assistant with TUI interface"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/rust_tui_coder"
+homepage = "https://github.com/yourusername/rust_tui_coder"
+documentation = "https://docs.rs/rust_tui_coder"
+keywords = ["tui", "ai", "coding-assistant", "llm", "terminal"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+exclude = [
+    "config.toml",
+    "plan.md",
+    ".git",
+    ".gitignore",
+]
+
+[[bin]]
+name = "rust_tui_coder"
+path = "src/main.rs"
+
+[dependencies]
+ratatui = { version = "0.26.0", features = ["all-widgets"] }
+crossterm = "0.27.0"
+tokio = { version = "1.35.1", features = ["full"] }
+reqwest = { version = "0.11.23", features = ["json", "stream"] }
+serde = { version = "1.0.195", features = ["derive"] }
+serde_json = "1.0.111"
+toml = "0.8.8"
+futures-util = "0.3.30"

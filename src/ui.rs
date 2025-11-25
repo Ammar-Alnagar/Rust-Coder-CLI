@@ -115,8 +115,7 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     // Add all conversation messages
     for message in &app.conversation {
-        if message.starts_with("User: ") {
-            let content = &message[6..]; // Remove "User: " prefix
+        if let Some(content) = message.strip_prefix("User: ") {
             let wrapped_content = wrap_text(content, max_width.saturating_sub(6)); // Account for "User: " prefix
 
             for (i, line) in wrapped_content.iter().enumerate() {
@@ -132,8 +131,7 @@ pub fn ui(f: &mut Frame, app: &App) {
                     ]));
                 }
             }
-        } else if message.starts_with("Agent: ") {
-            let content = &message[7..]; // Remove "Agent: " prefix
+        } else if let Some(content) = message.strip_prefix("Agent: ") {
             let wrapped_content = wrap_text(content, max_width.saturating_sub(7)); // Account for "Agent: " prefix
 
             for (i, line) in wrapped_content.iter().enumerate() {
@@ -187,9 +185,8 @@ pub fn ui(f: &mut Frame, app: &App) {
     }
 
     // Calculate scroll position based on app state
-    let max_scroll = conversation_lines
-        .len()
-        .saturating_sub(chunks[0].height as usize);
+    let visible_height = chunks[0].height.saturating_sub(2) as usize; // Account for borders
+    let max_scroll = conversation_lines.len().saturating_sub(visible_height);
     // Use the stored scroll position, clamped to valid range
     // Allow manual scrolling even during streaming
     let scroll_position = app.conversation_scroll_position.min(max_scroll);
@@ -216,9 +213,8 @@ pub fn ui(f: &mut Frame, app: &App) {
     };
 
     let tool_logs_lines: Vec<&str> = tool_logs_text.lines().collect();
-    let tool_max_scroll = tool_logs_lines
-        .len()
-        .saturating_sub(chunks[1].height as usize);
+    let tool_visible_height = chunks[1].height.saturating_sub(2) as usize; // Account for borders
+    let tool_max_scroll = tool_logs_lines.len().saturating_sub(tool_visible_height);
     let tool_scroll_position = app.tool_logs_scroll_position.min(tool_max_scroll);
 
     let tool_logs_block = Block::default()

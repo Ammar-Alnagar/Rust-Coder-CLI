@@ -51,6 +51,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// Type alias for cleaner code
+type AgentTaskResult = Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>>;
+type AgentTask = task::JoinHandle<AgentTaskResult>;
+
 async fn run_app<B: Backend>(
     terminal: &mut Terminal<B>,
     app: Arc<Mutex<App>>,
@@ -58,9 +62,7 @@ async fn run_app<B: Backend>(
     config: Config,
 ) -> io::Result<()> {
     // Track if there's an ongoing agent task
-    let mut current_agent_task: Option<
-        task::JoinHandle<Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>>>,
-    > = None;
+    let mut current_agent_task: Option<AgentTask> = None;
 
     loop {
         // Always draw the UI first
@@ -108,13 +110,9 @@ async fn run_app<B: Backend>(
                                 return Ok(());
                             }
                             KeyCode::Char(c) => {
-                                // Handle special commands first
+                                // Handle character input
                                 let mut app_guard = app.lock().await;
-                                if app_guard.user_input.is_empty() && c == '/' {
-                                    app_guard.user_input.push(c);
-                                } else if c != '/' {
-                                    app_guard.user_input.push(c);
-                                }
+                                app_guard.user_input.push(c);
                             }
                             KeyCode::Backspace => {
                                 let mut app_guard = app.lock().await;
