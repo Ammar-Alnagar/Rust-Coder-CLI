@@ -17,6 +17,7 @@ cargo test --test config_tests      # Configuration tests
 cargo test --test integration_tests # Integration tests
 cargo test --test llm_tests         # LLM module tests
 cargo test --test ui_tests          # UI and scrolling tests
+cargo test --test plan_tests        # Plan management tests (synchronized)
 cargo test --test comprehensive_tests # End-to-end tests
 cargo test --test performance_tests # Performance benchmarks
 cargo test --test edge_case_tests   # Edge case handling
@@ -25,12 +26,11 @@ cargo test --test edge_case_tests   # Edge case handling
 ## Test Coverage
 
 ### 1. Agent Tests (`tests/agent_tests.rs`)
-- **17 tests** covering all tool operations:
+- **14 tests** covering basic tool operations:
   - File operations (read, write, append, search/replace, delete)
   - Directory operations (create, list, recursive list)
   - Code execution (Python, Bash)
   - Git operations (status)
-  - Plan management (create, update, clear)
   - Command execution
 
 ### 2. App Tests (`tests/app_tests.rs`)
@@ -100,7 +100,17 @@ cargo test --test edge_case_tests   # Edge case handling
   - Directory with many files (100 files)
   - Recursive directory listing
 
-### 9. Edge Case Tests (`tests/edge_case_tests.rs`)
+### 9. Plan Tests (`tests/plan_tests.rs`)
+- **9 tests** for plan management with proper synchronization:
+  - Create plan with steps
+  - Update plan steps
+  - Clear plan
+  - Plan lifecycle (complete workflow)
+  - Edge cases (empty steps, nonexistent steps, special characters)
+  - Error handling (update before create, clear nonexistent)
+  - **Note:** Uses mutex to prevent race conditions in parallel execution
+
+### 10. Edge Case Tests (`tests/edge_case_tests.rs`)
 - **19 tests** for edge cases:
   - Empty file operations
   - Special characters in content
@@ -124,7 +134,7 @@ cargo test --test edge_case_tests   # Edge case handling
 
 ## Total Test Count
 
-**94 tests** across 9 test suites
+**99 tests** across 10 test suites
 
 ## Test Naming Conventions
 
