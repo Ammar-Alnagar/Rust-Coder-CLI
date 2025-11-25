@@ -197,65 +197,7 @@ fn test_tool_execute_code_bash() {
     assert!(result.unwrap().contains("Bash test"));
 }
 
-#[test]
-fn test_tool_create_plan() {
-    let tool = Tool::CreatePlan {
-        task: "Test Task".to_string(),
-        steps: vec![
-            "Step 1".to_string(),
-            "Step 2".to_string(),
-            "Step 3".to_string(),
-        ],
-    };
-
-    let result = tool.execute();
-    assert!(result.is_ok());
-    assert!(Path::new("plan.md").exists());
-
-    let content = fs::read_to_string("plan.md").unwrap();
-    assert!(content.contains("Test Task"));
-    assert!(content.contains("Step 1"));
-    assert!(content.contains("Step 2"));
-    assert!(content.contains("Step 3"));
-
-    fs::remove_file("plan.md").ok();
-}
-
-#[test]
-fn test_tool_update_plan() {
-    // First create a plan
-    let create_tool = Tool::CreatePlan {
-        task: "Test Task".to_string(),
-        steps: vec!["Step 1".to_string(), "Step 2".to_string()],
-    };
-    create_tool.execute().unwrap();
-
-    // Then update it
-    let update_tool = Tool::UpdatePlan { completed_step: 1 };
-    let result = update_tool.execute();
-    assert!(result.is_ok());
-
-    let content = fs::read_to_string("plan.md").unwrap();
-    assert!(content.contains("[x]"));
-
-    fs::remove_file("plan.md").ok();
-}
-
-#[test]
-fn test_tool_clear_plan() {
-    // First create a plan
-    let create_tool = Tool::CreatePlan {
-        task: "Test Task".to_string(),
-        steps: vec!["Step 1".to_string()],
-    };
-    create_tool.execute().unwrap();
-
-    // Then clear it
-    let clear_tool = Tool::ClearPlan;
-    let result = clear_tool.execute();
-    assert!(result.is_ok());
-    assert!(!Path::new("plan.md").exists());
-}
+// Plan tests moved to tests/plan_tests.rs to avoid race conditions
 
 #[test]
 fn test_tool_git_status() {

@@ -241,35 +241,7 @@ fn test_tool_error_handling() {
     assert!(replace.execute().is_err());
 }
 
-#[test]
-fn test_plan_lifecycle() {
-    // Create plan
-    let create = Tool::CreatePlan {
-        task: "Complete project".to_string(),
-        steps: vec![
-            "Setup environment".to_string(),
-            "Write code".to_string(),
-            "Test code".to_string(),
-            "Deploy".to_string(),
-        ],
-    };
-    assert!(create.execute().is_ok());
-
-    // Update each step
-    for i in 1..=4 {
-        let update = Tool::UpdatePlan { completed_step: i };
-        assert!(update.execute().is_ok());
-    }
-
-    // Verify completion
-    let content = fs::read_to_string("plan.md").unwrap();
-    assert!(content.contains("Completed: 4"));
-
-    // Clear plan
-    let clear = Tool::ClearPlan;
-    assert!(clear.execute().is_ok());
-    assert!(!std::path::Path::new("plan.md").exists());
-}
+// Plan lifecycle test moved to tests/plan_tests.rs to avoid race conditions
 
 #[test]
 fn test_usage_tracking_accuracy() {
