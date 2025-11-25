@@ -21,7 +21,8 @@ fn test_estimate_token_count_long() {
 #[test]
 fn test_estimate_token_count_whitespace() {
     let count = estimate_token_count("   ");
-    assert!(count >= 0);
+    // Whitespace counts as characters, so it returns a small non-zero count
+    assert!(count <= 1);
 }
 
 #[test]
@@ -36,7 +37,7 @@ fn test_message_creation() {
         role: "user".to_string(),
         content: "Hello, AI!".to_string(),
     };
-    
+
     assert_eq!(message.role, "user");
     assert_eq!(message.content, "Hello, AI!");
 }
@@ -47,7 +48,7 @@ fn test_message_clone() {
         role: "assistant".to_string(),
         content: "Hello, human!".to_string(),
     };
-    
+
     let cloned = message.clone();
     assert_eq!(message.role, cloned.role);
     assert_eq!(message.content, cloned.content);
@@ -59,10 +60,10 @@ fn test_message_serialization() {
         role: "system".to_string(),
         content: "You are a helpful assistant.".to_string(),
     };
-    
+
     let json = serde_json::to_string(&message);
     assert!(json.is_ok());
-    
+
     let json_str = json.unwrap();
     assert!(json_str.contains("system"));
     assert!(json_str.contains("You are a helpful assistant"));
@@ -72,7 +73,7 @@ fn test_message_serialization() {
 fn test_message_deserialization() {
     let json_str = r#"{"role":"user","content":"Test message"}"#;
     let result: Result<Message, _> = serde_json::from_str(json_str);
-    
+
     assert!(result.is_ok());
     let message = result.unwrap();
     assert_eq!(message.role, "user");

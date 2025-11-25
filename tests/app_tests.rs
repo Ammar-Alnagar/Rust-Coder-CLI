@@ -64,7 +64,7 @@ fn test_scroll_conversation_up() {
     app.conversation_scroll_position = 10;
     app.scroll_conversation_up();
     assert_eq!(app.conversation_scroll_position, 9);
-    
+
     // Test boundary condition
     app.conversation_scroll_position = 0;
     app.scroll_conversation_up();
@@ -99,17 +99,17 @@ fn test_scroll_conversation_to_bottom() {
 fn test_streaming_state() {
     let mut app = App::new();
     assert!(!app.is_streaming);
-    
+
     app.start_streaming();
     assert!(app.is_streaming);
     assert_eq!(app.current_streaming_message, "");
-    
+
     app.update_streaming_message("Hello");
     assert_eq!(app.current_streaming_message, "Hello");
-    
+
     app.update_streaming_message(" World");
     assert_eq!(app.current_streaming_message, "Hello World");
-    
+
     app.finish_streaming("Hello World".to_string());
     assert!(!app.is_streaming);
     assert_eq!(app.current_streaming_message, "");
@@ -124,7 +124,7 @@ fn test_usage_summary() {
     app.increment_requests();
     app.increment_requests();
     app.increment_tools_executed();
-    
+
     let summary = app.get_usage_summary();
     assert!(summary.contains("Tokens Used: 1000"));
     assert!(summary.contains("LLM Requests: 2"));

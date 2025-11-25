@@ -186,10 +186,22 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     // Calculate scroll position based on app state
     let visible_height = chunks[0].height.saturating_sub(2) as usize; // Account for borders
-    let max_scroll = conversation_lines.len().saturating_sub(visible_height);
-    // Use the stored scroll position, clamped to valid range
-    // Allow manual scrolling even during streaming
-    let scroll_position = app.conversation_scroll_position.min(max_scroll);
+    let total_lines = conversation_lines.len();
+
+    // Calculate max scroll position - ensure we can't scroll past the content
+    let max_scroll = if total_lines > visible_height {
+        total_lines.saturating_sub(visible_height)
+    } else {
+        0
+    };
+
+    // Clamp scroll position to valid range
+    let scroll_position = if app.conversation_scroll_position == usize::MAX {
+        // Auto-scroll to bottom when set to MAX
+        max_scroll
+    } else {
+        app.conversation_scroll_position.min(max_scroll)
+    };
 
     let conversation_block = Block::default().title("Conversation").borders(Borders::ALL);
     let conversation = Paragraph::new(conversation_lines.clone())
@@ -214,7 +226,15 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     let tool_logs_lines: Vec<&str> = tool_logs_text.lines().collect();
     let tool_visible_height = chunks[1].height.saturating_sub(2) as usize; // Account for borders
-    let tool_max_scroll = tool_logs_lines.len().saturating_sub(tool_visible_height);
+    let tool_total_lines = tool_logs_lines.len();
+
+    // Calculate max scroll for tool logs
+    let tool_max_scroll = if tool_total_lines > tool_visible_height {
+        tool_total_lines.saturating_sub(tool_visible_height)
+    } else {
+        0
+    };
+
     let tool_scroll_position = app.tool_logs_scroll_position.min(tool_max_scroll);
 
     let tool_logs_block = Block::default()

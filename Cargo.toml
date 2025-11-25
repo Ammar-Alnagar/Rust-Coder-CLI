@@ -1,21 +1,24 @@
 [package]
 name = "rust_tui_coder"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
-description = "An AI-powered terminal-based coding assistant with TUI interface"
+authors = ["Ammar Alnagar <Ammaralnagar4162gmail.com>"]
+description = "AI-powered terminal coding assistant with interactive TUI, supporting multiple LLMs and comprehensive development tools"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/rust_tui_coder"
-homepage = "https://github.com/yourusername/rust_tui_coder"
+repository = "https://github.com/Ammar-Alnagar/Rust-Coder-CLI"
+homepage = "https://github.com/Ammar-Alnagar/Rust-Coder-CLI"
 documentation = "https://docs.rs/rust_tui_coder"
-keywords = ["tui", "ai", "coding-assistant", "llm", "terminal"]
+keywords = ["tui", "ai", "coding-assistant", "llm", "cli"]
 categories = ["command-line-utilities", "development-tools"]
 readme = "README.md"
+rust-version = "1.70"
 exclude = [
     "config.toml",
     "plan.md",
     ".git",
     ".gitignore",
+    "tmp_rovodev_*",
+    "*.png",
 ]
 
 [[bin]]
