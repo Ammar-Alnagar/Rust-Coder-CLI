@@ -1,11 +1,11 @@
+use crate::app::App;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     style::{Color, Style, Stylize},
-    text::{Span, Line},
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     Frame,
 };
-use crate::app::App;
 
 // Enhanced helper function to wrap text to fit within a given width
 fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
@@ -53,7 +53,11 @@ fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
             }
 
             // Check if word fits on current line
-            let space_needed = if current_line.is_empty() { word.len() } else { current_line.len() + 1 + word.len() };
+            let space_needed = if current_line.is_empty() {
+                word.len()
+            } else {
+                current_line.len() + 1 + word.len()
+            };
 
             if space_needed <= max_width {
                 if !current_line.is_empty() {
@@ -148,16 +152,15 @@ pub fn ui(f: &mut Frame, app: &App) {
         } else {
             let wrapped_message = wrap_text(message, max_width);
             for line in wrapped_message {
-                conversation_lines.push(Line::from(vec![
-                    Span::styled(line, Style::default().fg(Color::Yellow)),
-                ]));
+                conversation_lines.push(Line::from(vec![Span::styled(
+                    line,
+                    Style::default().fg(Color::Yellow),
+                )]));
             }
         }
 
         // Add a blank line between messages for better readability
-        conversation_lines.push(Line::from(vec![
-            Span::styled("", Style::default()),
-        ]));
+        conversation_lines.push(Line::from(vec![Span::styled("", Style::default())]));
     }
 
     // Add streaming message if currently streaming
@@ -180,13 +183,13 @@ pub fn ui(f: &mut Frame, app: &App) {
         }
 
         // Add a blank line after streaming message
-        conversation_lines.push(Line::from(vec![
-            Span::styled("", Style::default()),
-        ]));
+        conversation_lines.push(Line::from(vec![Span::styled("", Style::default())]));
     }
-    
+
     // Calculate scroll position based on app state
-    let max_scroll = conversation_lines.len().saturating_sub(chunks[0].height as usize);
+    let max_scroll = conversation_lines
+        .len()
+        .saturating_sub(chunks[0].height as usize);
     // Use the stored scroll position, clamped to valid range
     // Allow manual scrolling even during streaming
     let scroll_position = app.conversation_scroll_position.min(max_scroll);
@@ -199,8 +202,8 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     // Add scrollbar for conversation
     let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-    let mut scrollbar_state = ScrollbarState::new(conversation_lines.len())
-        .position(scroll_position);
+    let mut scrollbar_state =
+        ScrollbarState::new(conversation_lines.len()).position(scroll_position);
     f.render_stateful_widget(scrollbar, chunks[0], &mut scrollbar_state);
 
     // Note: scroll position is managed by the app state, not updated here
@@ -211,9 +214,11 @@ pub fn ui(f: &mut Frame, app: &App) {
     } else {
         app.tool_logs.join("\n")
     };
-    
+
     let tool_logs_lines: Vec<&str> = tool_logs_text.lines().collect();
-    let tool_max_scroll = tool_logs_lines.len().saturating_sub(chunks[1].height as usize);
+    let tool_max_scroll = tool_logs_lines
+        .len()
+        .saturating_sub(chunks[1].height as usize);
     let tool_scroll_position = app.tool_logs_scroll_position.min(tool_max_scroll);
 
     let tool_logs_block = Block::default()
@@ -230,8 +235,8 @@ pub fn ui(f: &mut Frame, app: &App) {
 
     // Add scrollbar for tool logs
     let tool_scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-    let mut tool_scrollbar_state = ScrollbarState::new(tool_logs_lines.len())
-        .position(tool_scroll_position);
+    let mut tool_scrollbar_state =
+        ScrollbarState::new(tool_logs_lines.len()).position(tool_scroll_position);
     f.render_stateful_widget(tool_scrollbar, chunks[1], &mut tool_scrollbar_state);
 
     // Note: tool logs scroll position is managed by the app state, not updated here
@@ -248,12 +253,10 @@ pub fn ui(f: &mut Frame, app: &App) {
     };
 
     let input_text = wrapped_input.join("\n");
-    let input = Paragraph::new(input_text)
-        .block(input_block);
+    let input = Paragraph::new(input_text).block(input_block);
     f.render_widget(input, chunks[2]);
 
     let status_block = Block::default().title("Status").borders(Borders::ALL);
-    let status = Paragraph::new(app.status_message.as_str())
-        .block(status_block);
+    let status = Paragraph::new(app.status_message.as_str()).block(status_block);
     f.render_widget(status, chunks[3]);
 }

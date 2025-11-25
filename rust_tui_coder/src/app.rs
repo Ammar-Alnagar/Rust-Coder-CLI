@@ -22,7 +22,8 @@ impl App {
         Self {
             user_input: String::new(),
             conversation: Vec::new(),
-            status_message: "Commands: /quit (exit), /stats (usage stats), ↑↓ (scroll conversation)".to_string(),
+            status_message:
+                "Commands: /quit (exit), /stats (usage stats), ↑↓ (scroll conversation)".to_string(),
             tool_logs: Vec::new(),
             is_executing_tool: false,
             current_tool: String::new(),
@@ -109,7 +110,6 @@ impl App {
         self.conversation_scroll_position = usize::MAX; // Set to max, will be clamped in UI
     }
 
-
     // Streaming state management
     pub fn start_streaming(&mut self) {
         self.is_streaming = true;
@@ -130,5 +130,4 @@ impl App {
         self.status_message = "✅ Done.".to_string();
         self.scroll_conversation_to_bottom();
     }
-
 }

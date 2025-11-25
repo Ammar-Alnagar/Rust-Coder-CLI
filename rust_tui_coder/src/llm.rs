@@ -1,9 +1,9 @@
+use crate::config::LlmConfig;
+use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use crate::config::LlmConfig;
 use std::error::Error;
 use std::fmt;
-use futures_util::StreamExt;
 
 // Token estimation function (rough approximation based on GPT tokenization)
 pub fn estimate_token_count(text: &str) -> u64 {
@@ -93,7 +93,10 @@ struct Choice {
     message: Message,
 }
 
-pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> Result<(String, u64), LlmError> {
+pub async fn ask_llm_with_messages(
+    config: &LlmConfig,
+    messages: &[Message],
+) -> Result<(String, u64), LlmError> {
     let client = Client::new();
     let _provider = config.provider.as_deref().unwrap_or("openai");
 
@@ -105,12 +108,11 @@ pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> 
     }
 
     // Determine model to use (support AUTODETECT from /models endpoint for OpenAI-compatible APIs)
-    let model_to_use = if config.model_name.eq_ignore_ascii_case("AUTODETECT") || config.model_name.trim().is_empty() {
+    let model_to_use = if config.model_name.eq_ignore_ascii_case("AUTODETECT")
+        || config.model_name.trim().is_empty()
+    {
         // Fetch available models and use the first one
-        let models_url = format!(
-            "{}/models",
-            config.api_base_url.trim_end_matches('/')
-        );
+        let models_url = format!("{}/models", config.api_base_url.trim_end_matches('/'));
 
         let mut models_request = client.get(&models_url);
         if !config.api_key.is_empty() {
@@ -127,15 +129,17 @@ pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> 
             )));
         }
 
-        let parsed_models: ModelsResponse = serde_json::from_str(&response_text)
-            .map_err(|e| LlmError::ParseError(format!(
-                "Failed to parse /models response: {}",
-                e
-            )))?;
+        let parsed_models: ModelsResponse = serde_json::from_str(&response_text).map_err(|e| {
+            LlmError::ParseError(format!("Failed to parse /models response: {}", e))
+        })?;
 
         match parsed_models.data.first() {
             Some(first) => first.id.clone(),
-            None => return Err(LlmError::ApiError("No models returned by /models".to_string())),
+            None => {
+                return Err(LlmError::ApiError(
+                    "No models returned by /models".to_string(),
+                ))
+            }
         }
     } else {
         config.model_name.clone()
@@ -163,7 +167,10 @@ pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> 
     let status = response.status();
     if !status.is_success() {
         let error_text = response.text().await?;
-        return Err(LlmError::ApiError(format!("HTTP {}: {}", status, error_text)));
+        return Err(LlmError::ApiError(format!(
+            "HTTP {}: {}",
+            status, error_text
+        )));
     }
 
     // Get the raw response text for debugging
@@ -184,9 +191,10 @@ pub async fn ask_llm_with_messages(config: &LlmConfig, messages: &[Message]) -> 
                 Ok((response_content, total_tokens))
             }
         }
-        Err(e) => {
-            Err(LlmError::ParseError(format!("Failed to parse API response: {}", e)))
-        }
+        Err(e) => Err(LlmError::ParseError(format!(
+            "Failed to parse API response: {}",
+            e
+        ))),
     }
 }
 
@@ -198,7 +206,9 @@ pub async fn stream_llm_response(
     let client = Client::new();
 
     // Determine model to use
-    let model_to_use = if config.model_name.eq_ignore_ascii_case("AUTODETECT") || config.model_name.trim().is_empty() {
+    let model_to_use = if config.model_name.eq_ignore_ascii_case("AUTODETECT")
+        || config.model_name.trim().is_empty()
+    {
         // For streaming, we'll use the provided model or default to a common one
         "gpt-3.5-turbo".to_string()
     } else {
@@ -228,7 +238,10 @@ pub async fn stream_llm_response(
     if !response.status().is_success() {
         let status = response.status();
         let error_text = response.text().await?;
-        return Err(LlmError::ApiError(format!("HTTP {}: {}", status, error_text)));
+        return Err(LlmError::ApiError(format!(
+            "HTTP {}: {}",
+            status, error_text
+        )));
     }
 
     // Get the response body as a stream

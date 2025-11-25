@@ -1,26 +1,26 @@
-mod config;
-mod llm;
 mod agent;
 mod app;
+mod config;
+mod llm;
 mod ui;
 
+use agent::Agent;
+use app::App;
+use config::Config;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::time::Duration;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
 use std::io;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::task;
-use app::App;
-use agent::Agent;
-use config::Config;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,10 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // restore terminal
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {
@@ -61,7 +58,9 @@ async fn run_app<B: Backend>(
     config: Config,
 ) -> io::Result<()> {
     // Track if there's an ongoing agent task
-    let mut current_agent_task: Option<task::JoinHandle<Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>>>> = None;
+    let mut current_agent_task: Option<
+        task::JoinHandle<Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>>>,
+    > = None;
 
     loop {
         // Always draw the UI first
@@ -200,7 +199,9 @@ async fn run_app<B: Backend>(
                                 {
                                     let mut app_guard = app.lock().await;
                                     app_guard.conversation.push(format!("User: {}", user_input));
-                                    app_guard.status_message = "🤔 Thinking... (streaming response will appear live)".to_string();
+                                    app_guard.status_message =
+                                        "🤔 Thinking... (streaming response will appear live)"
+                                            .to_string();
                                     terminal.draw(|f| ui::ui(f, &app_guard))?;
                                 }
 
@@ -212,7 +213,9 @@ async fn run_app<B: Backend>(
                                 current_agent_task = Some(task::spawn(async move {
                                     // Run the agent with access to the shared app state
                                     // The agent will handle its own locking/unlocking to allow UI updates
-                                    let result = agent_clone.run(&config_clone.llm, user_input_clone, app_clone).await;
+                                    let result = agent_clone
+                                        .run(&config_clone.llm, user_input_clone, app_clone)
+                                        .await;
                                     result
                                 }));
                             }

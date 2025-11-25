@@ -18,8 +18,8 @@ pub struct LlmConfig {
 impl Config {
     pub fn from_file(path: &str) -> Result<Self, io::Error> {
         let contents = fs::read_to_string(path)?;
-        let config: Config = toml::from_str(&contents)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let config: Config =
+            toml::from_str(&contents).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
         Ok(config)
     }
 }

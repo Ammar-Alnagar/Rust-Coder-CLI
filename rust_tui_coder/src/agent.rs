@@ -1,13 +1,13 @@
+use crate::config::LlmConfig;
+use crate::llm::Message;
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io;
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 use std::sync::Arc;
-use futures_util::StreamExt;
 use tokio::sync::Mutex;
-use crate::llm::Message;
-use crate::config::LlmConfig;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ToolCall {
@@ -36,7 +36,11 @@ impl ToolCall {
                 let path = self.parameters.get("path")?.as_str()?.to_string();
                 let old_string = self.parameters.get("old_string")?.as_str()?.to_string();
                 let new_string = self.parameters.get("new_string")?.as_str()?.to_string();
-                Some(Tool::SearchReplace { path, old_string, new_string })
+                Some(Tool::SearchReplace {
+                    path,
+                    old_string,
+                    new_string,
+                })
             }
             "DELETE_FILE" => {
                 let path = self.parameters.get("path")?.as_str()?.to_string();
@@ -56,7 +60,11 @@ impl ToolCall {
             }
             "GREP_SEARCH" => {
                 let pattern = self.parameters.get("pattern")?.as_str()?.to_string();
-                let path = self.parameters.get("path").and_then(|p| p.as_str()).map(|s| s.to_string());
+                let path = self
+                    .parameters
+                    .get("path")
+                    .and_then(|p| p.as_str())
+                    .map(|s| s.to_string());
                 Some(Tool::GrepSearch { pattern, path })
             }
             "GLOB_SEARCH" => {
@@ -79,17 +87,29 @@ impl ToolCall {
                 Some(Tool::GitCommit { message })
             }
             "GIT_LOG" => {
-                let count = self.parameters.get("count").and_then(|c| c.as_u64()).map(|c| c as usize);
+                let count = self
+                    .parameters
+                    .get("count")
+                    .and_then(|c| c.as_u64())
+                    .map(|c| c as usize);
                 Some(Tool::GitLog { count })
             }
             "RUN_LINT" => {
                 let language = self.parameters.get("language")?.as_str()?.to_string();
-                let path = self.parameters.get("path").and_then(|p| p.as_str()).map(|s| s.to_string());
+                let path = self
+                    .parameters
+                    .get("path")
+                    .and_then(|p| p.as_str())
+                    .map(|s| s.to_string());
                 Some(Tool::RunLint { language, path })
             }
             "RUN_TESTS" => {
                 let framework = self.parameters.get("framework")?.as_str()?.to_string();
-                let path = self.parameters.get("path").and_then(|p| p.as_str()).map(|s| s.to_string());
+                let path = self
+                    .parameters
+                    .get("path")
+                    .and_then(|p| p.as_str())
+                    .map(|s| s.to_string());
                 Some(Tool::RunTests { framework, path })
             }
             "INSTALL_PACKAGE" => {
@@ -100,7 +120,8 @@ impl ToolCall {
             "CREATE_PLAN" => {
                 let task = self.parameters.get("task")?.as_str()?.to_string();
                 let steps_array = self.parameters.get("steps")?.as_array()?;
-                let steps: Vec<String> = steps_array.iter()
+                let steps: Vec<String> = steps_array
+                    .iter()
                     .filter_map(|v| v.as_str())
                     .map(|s| s.to_string())
                     .collect();
@@ -111,7 +132,7 @@ impl ToolCall {
                 Some(Tool::UpdatePlan { completed_step })
             }
             "CLEAR_PLAN" => Some(Tool::ClearPlan),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -119,41 +140,89 @@ impl ToolCall {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Tool {
     // File Operations
-    ReadFile { path: String },
-    WriteFile { path: String, content: String },
-    AppendFile { path: String, content: String },
-    SearchReplace { path: String, old_string: String, new_string: String },
-    DeleteFile { path: String },
+    ReadFile {
+        path: String,
+    },
+    WriteFile {
+        path: String,
+        content: String,
+    },
+    AppendFile {
+        path: String,
+        content: String,
+    },
+    SearchReplace {
+        path: String,
+        old_string: String,
+        new_string: String,
+    },
+    DeleteFile {
+        path: String,
+    },
 
     // Directory Operations
-    ListFiles { path: String },
-    ListFilesRecursive { path: String },
-    CreateDirectory { path: String },
+    ListFiles {
+        path: String,
+    },
+    ListFilesRecursive {
+        path: String,
+    },
+    CreateDirectory {
+        path: String,
+    },
 
     // Search & Navigation
-    GrepSearch { pattern: String, path: Option<String> },
-    GlobSearch { pattern: String },
+    GrepSearch {
+        pattern: String,
+        path: Option<String>,
+    },
+    GlobSearch {
+        pattern: String,
+    },
 
     // Code Execution & Compilation
-    ExecuteCode { language: String, code: String },
-    RunCommand { command: String },
+    ExecuteCode {
+        language: String,
+        code: String,
+    },
+    RunCommand {
+        command: String,
+    },
 
     // Development Workflow
     GitStatus,
     GitDiff,
-    GitCommit { message: String },
-    GitLog { count: Option<usize> },
+    GitCommit {
+        message: String,
+    },
+    GitLog {
+        count: Option<usize>,
+    },
 
     // Quality Assurance
-    RunLint { language: String, path: Option<String> },
-    RunTests { framework: String, path: Option<String> },
+    RunLint {
+        language: String,
+        path: Option<String>,
+    },
+    RunTests {
+        framework: String,
+        path: Option<String>,
+    },
 
     // Package Management
-    InstallPackage { manager: String, package: String },
+    InstallPackage {
+        manager: String,
+        package: String,
+    },
 
     // Planning and Task Management
-    CreatePlan { task: String, steps: Vec<String> },
-    UpdatePlan { completed_step: usize },
+    CreatePlan {
+        task: String,
+        steps: Vec<String>,
+    },
+    UpdatePlan {
+        completed_step: usize,
+    },
     ClearPlan,
 }
 
@@ -565,26 +634,44 @@ impl Tool {
 
     // Helper methods for code execution
     fn execute_python(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!("/tmp/temp_code_{}.py", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+        let temp_file = format!(
+            "/tmp/temp_code_{}.py",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
         fs::write(&temp_file, code)?;
         let output = Command::new("python3").arg(&temp_file).output()?;
         let _ = fs::remove_file(temp_file);
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
-            Ok(format!("Python execution failed:\n{}", String::from_utf8_lossy(&output.stderr)))
+            Ok(format!(
+                "Python execution failed:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
 
     fn execute_javascript(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!("/tmp/temp_code_{}.js", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+        let temp_file = format!(
+            "/tmp/temp_code_{}.js",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
         fs::write(&temp_file, code)?;
         let output = Command::new("node").arg(&temp_file).output()?;
         let _ = fs::remove_file(temp_file);
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
-            Ok(format!("JavaScript execution failed:\n{}", String::from_utf8_lossy(&output.stderr)))
+            Ok(format!(
+                "JavaScript execution failed:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
 
@@ -593,24 +680,36 @@ impl Tool {
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
-            Ok(format!("Bash execution failed:\n{}", String::from_utf8_lossy(&output.stderr)))
+            Ok(format!(
+                "Bash execution failed:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
 
     fn execute_rust(code: &str) -> Result<String, io::Error> {
-                        let temp_dir = format!("/tmp/rust_code_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
-                        fs::create_dir_all(&temp_dir)?;
-                        let main_rs = format!("{}/src/main.rs", temp_dir);
-                        let cargo_toml = format!("{}/Cargo.toml", temp_dir);
-                        
-                        fs::write(&cargo_toml, r#"[package]
+        let temp_dir = format!(
+            "/tmp/rust_code_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
+        fs::create_dir_all(&temp_dir)?;
+        let main_rs = format!("{}/src/main.rs", temp_dir);
+        let cargo_toml = format!("{}/Cargo.toml", temp_dir);
+
+        fs::write(
+            &cargo_toml,
+            r#"[package]
 name = "temp_code"
 version = "0.1.0"
 edition = "2021"
 [dependencies]
-"#)?;
-                        fs::create_dir_all(format!("{}/src", temp_dir))?;
-                        fs::write(&main_rs, code)?;
+"#,
+        )?;
+        fs::create_dir_all(format!("{}/src", temp_dir))?;
+        fs::write(&main_rs, code)?;
         let mut cmd = Command::new("cargo");
         cmd.arg("run").current_dir(&temp_dir);
         let output = cmd.output()?;
@@ -618,58 +717,106 @@ edition = "2021"
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
-            Ok(format!("Rust execution failed:\n{}", String::from_utf8_lossy(&output.stderr)))
+            Ok(format!(
+                "Rust execution failed:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
 
     fn execute_go(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!("/tmp/temp_code_{}.go", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+        let temp_file = format!(
+            "/tmp/temp_code_{}.go",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
         fs::write(&temp_file, format!("package main\n\n{}", code))?;
         let output = Command::new("go").arg("run").arg(&temp_file).output()?;
         let _ = fs::remove_file(temp_file);
-                        if output.status.success() {
-                            Ok(String::from_utf8_lossy(&output.stdout).to_string())
-                        } else {
-            Ok(format!("Go execution failed:\n{}", String::from_utf8_lossy(&output.stderr)))
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        } else {
+            Ok(format!(
+                "Go execution failed:\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
         }
     }
 
     fn execute_java(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!("/tmp/temp_code_{}.java", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+        let temp_file = format!(
+            "/tmp/temp_code_{}.java",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
         let class_name = "TempCode";
         let full_code = format!("public class {} {{\n    public static void main(String[] args) {{\n        {}\n    }}\n}}", class_name, code);
         fs::write(&temp_file, full_code)?;
         let compile_output = Command::new("javac").arg(&temp_file).output()?;
         if compile_output.status.success() {
-            let run_output = Command::new("java").arg("-cp").arg("/tmp").arg(class_name).output()?;
+            let run_output = Command::new("java")
+                .arg("-cp")
+                .arg("/tmp")
+                .arg(class_name)
+                .output()?;
             let _ = fs::remove_file(temp_file);
             let _ = fs::remove_file(format!("/tmp/{}.class", class_name));
             if run_output.status.success() {
                 Ok(String::from_utf8_lossy(&run_output.stdout).to_string())
             } else {
-                Ok(format!("Java execution failed:\n{}", String::from_utf8_lossy(&run_output.stderr)))
+                Ok(format!(
+                    "Java execution failed:\n{}",
+                    String::from_utf8_lossy(&run_output.stderr)
+                ))
             }
         } else {
             let _ = fs::remove_file(temp_file);
-            Ok(format!("Java compilation failed:\n{}", String::from_utf8_lossy(&compile_output.stderr)))
+            Ok(format!(
+                "Java compilation failed:\n{}",
+                String::from_utf8_lossy(&compile_output.stderr)
+            ))
         }
     }
 
     fn execute_c_cpp(code: &str, language: &str) -> Result<String, io::Error> {
         let is_cpp = matches!(language.to_lowercase().as_str(), "cpp" | "c++");
         let extension = if is_cpp { "cpp" } else { "c" };
-        let temp_source = format!("/tmp/temp_code_{}.{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(), extension);
-        let temp_exe = format!("/tmp/temp_exe_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+        let temp_source = format!(
+            "/tmp/temp_code_{}.{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            extension
+        );
+        let temp_exe = format!(
+            "/tmp/temp_exe_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
 
         let full_code = if is_cpp {
-            format!("#include <iostream>\nint main() {{\n{}\nreturn 0;\n}}", code)
+            format!(
+                "#include <iostream>\nint main() {{\n{}\nreturn 0;\n}}",
+                code
+            )
         } else {
             format!("#include <stdio.h>\nint main() {{\n{}\nreturn 0;\n}}", code)
         };
 
         fs::write(&temp_source, full_code)?;
         let compiler = if is_cpp { "g++" } else { "gcc" };
-        let compile_output = Command::new(compiler).arg(&temp_source).arg("-o").arg(&temp_exe).output()?;
+        let compile_output = Command::new(compiler)
+            .arg(&temp_source)
+            .arg("-o")
+            .arg(&temp_exe)
+            .output()?;
         if compile_output.status.success() {
             let run_output = Command::new(&temp_exe).output()?;
             let _ = fs::remove_file(temp_source);
@@ -677,11 +824,19 @@ edition = "2021"
             if run_output.status.success() {
                 Ok(String::from_utf8_lossy(&run_output.stdout).to_string())
             } else {
-                Ok(format!("{} execution failed:\n{}", if is_cpp { "C++" } else { "C" }, String::from_utf8_lossy(&run_output.stderr)))
+                Ok(format!(
+                    "{} execution failed:\n{}",
+                    if is_cpp { "C++" } else { "C" },
+                    String::from_utf8_lossy(&run_output.stderr)
+                ))
             }
         } else {
             let _ = fs::remove_file(temp_source);
-            Ok(format!("{} compilation failed:\n{}", if is_cpp { "C++" } else { "C" }, String::from_utf8_lossy(&compile_output.stderr)))
+            Ok(format!(
+                "{} compilation failed:\n{}",
+                if is_cpp { "C++" } else { "C" },
+                String::from_utf8_lossy(&compile_output.stderr)
+            ))
         }
     }
 }
@@ -693,9 +848,7 @@ pub struct Agent {
 
 impl Agent {
     pub fn new() -> Self {
-        Self {
-            messages: vec![],
-        }
+        Self { messages: vec![] }
     }
 
     fn get_system_prompt() -> String {
@@ -934,16 +1087,18 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                 if parts.len() >= 2 {
                     let tool_name = parts[0];
                     let params = parts[1];
-                    
+
                     return match tool_name {
-                        "READ_FILE" => Some(Tool::ReadFile { path: params.to_string() }),
+                        "READ_FILE" => Some(Tool::ReadFile {
+                            path: params.to_string(),
+                        }),
                         "WRITE_FILE" => {
                             if let Some(space_pos) = params.find(' ') {
                                 let path = &params[..space_pos];
                                 let content = &params[space_pos + 1..];
-                                Some(Tool::WriteFile { 
-                                    path: path.to_string(), 
-                                    content: content.to_string() 
+                                Some(Tool::WriteFile {
+                                    path: path.to_string(),
+                                    content: content.to_string(),
                                 })
                             } else {
                                 None
@@ -955,7 +1110,7 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                                 let content = &params[space_pos + 1..];
                                 Some(Tool::AppendFile {
                                     path: path.to_string(),
-                                    content: content.to_string()
+                                    content: content.to_string(),
                                 })
                             } else {
                                 None
@@ -984,18 +1139,28 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                                 None
                             }
                         }
-                        "RUN_COMMAND" => Some(Tool::RunCommand { command: params.to_string() }),
-                        "LIST_FILES" => Some(Tool::ListFiles { path: params.to_string() }),
-                        "LIST_FILES_RECURSIVE" => Some(Tool::ListFilesRecursive { path: params.to_string() }),
-                        "CREATE_DIRECTORY" => Some(Tool::CreateDirectory { path: params.to_string() }),
-                        "DELETE_FILE" => Some(Tool::DeleteFile { path: params.to_string() }),
+                        "RUN_COMMAND" => Some(Tool::RunCommand {
+                            command: params.to_string(),
+                        }),
+                        "LIST_FILES" => Some(Tool::ListFiles {
+                            path: params.to_string(),
+                        }),
+                        "LIST_FILES_RECURSIVE" => Some(Tool::ListFilesRecursive {
+                            path: params.to_string(),
+                        }),
+                        "CREATE_DIRECTORY" => Some(Tool::CreateDirectory {
+                            path: params.to_string(),
+                        }),
+                        "DELETE_FILE" => Some(Tool::DeleteFile {
+                            path: params.to_string(),
+                        }),
                         "EXECUTE_CODE" => {
                             if let Some(space_pos) = params.find(' ') {
                                 let language = &params[..space_pos];
                                 let code = &params[space_pos + 1..];
-                                Some(Tool::ExecuteCode { 
-                                    language: language.to_string(), 
-                                    code: code.to_string() 
+                                Some(Tool::ExecuteCode {
+                                    language: language.to_string(),
+                                    code: code.to_string(),
                                 })
                             } else {
                                 None
@@ -1008,10 +1173,14 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                             let path = search_parts.get(1).map(|s| s.to_string());
                             Some(Tool::GrepSearch { pattern, path })
                         }
-                        "GLOB_SEARCH" => Some(Tool::GlobSearch { pattern: params.to_string() }),
+                        "GLOB_SEARCH" => Some(Tool::GlobSearch {
+                            pattern: params.to_string(),
+                        }),
                         "GIT_STATUS" => Some(Tool::GitStatus),
                         "GIT_DIFF" => Some(Tool::GitDiff),
-                        "GIT_COMMIT" => Some(Tool::GitCommit { message: params.to_string() }),
+                        "GIT_COMMIT" => Some(Tool::GitCommit {
+                            message: params.to_string(),
+                        }),
                         "GIT_LOG" => {
                             let count = if params.is_empty() {
                                 None
@@ -1045,10 +1214,14 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                         }
                         "CREATE_PLAN" => {
                             // Parse: "task description" "step1" "step2" "step3"
-                            let parts: Vec<&str> = params.split('"').filter(|s| !s.is_empty() && !s.trim().is_empty()).collect();
+                            let parts: Vec<&str> = params
+                                .split('"')
+                                .filter(|s| !s.is_empty() && !s.trim().is_empty())
+                                .collect();
                             if parts.len() >= 2 {
                                 let task = parts[0].trim().to_string();
-                                let steps: Vec<String> = parts[1..].iter().map(|s| s.trim().to_string()).collect();
+                                let steps: Vec<String> =
+                                    parts[1..].iter().map(|s| s.trim().to_string()).collect();
                                 Some(Tool::CreatePlan { task, steps })
                             } else {
                                 None
@@ -1056,13 +1229,15 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                         }
                         "UPDATE_PLAN" => {
                             if let Ok(step) = params.trim().parse::<usize>() {
-                                Some(Tool::UpdatePlan { completed_step: step })
+                                Some(Tool::UpdatePlan {
+                                    completed_step: step,
+                                })
                             } else {
                                 None
                             }
                         }
                         "CLEAR_PLAN" => Some(Tool::ClearPlan),
-                        _ => None
+                        _ => None,
                     };
                 }
             }
@@ -1070,11 +1245,21 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
         None
     }
 
-    pub async fn run(&mut self, config: &LlmConfig, user_prompt: String, app: Arc<Mutex<crate::app::App>>) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run(
+        &mut self,
+        config: &LlmConfig,
+        user_prompt: String,
+        app: Arc<Mutex<crate::app::App>>,
+    ) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
         self.run_with_streaming(config, user_prompt, app).await
     }
 
-    pub async fn run_with_streaming(&mut self, config: &LlmConfig, user_prompt: String, app: Arc<Mutex<crate::app::App>>) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run_with_streaming(
+        &mut self,
+        config: &LlmConfig,
+        user_prompt: String,
+        app: Arc<Mutex<crate::app::App>>,
+    ) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
         // Add system message if this is the first interaction
         if self.messages.is_empty() {
             self.messages.push(Message {
@@ -1084,7 +1269,8 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
         }
 
         // Add planning reminder for complex tasks
-        if self.messages.len() == 1 { // Only add once, after system message
+        if self.messages.len() == 1 {
+            // Only add once, after system message
             self.messages.push(Message {
                 role: "system".to_string(),
                 content: "REMINDER: If the user's request is complex (3+ steps, multiple files), start with CREATE_PLAN. For simple tasks, use tools directly.".to_string(),
@@ -1093,17 +1279,30 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
 
         // Add task complexity analysis
         let user_input_lower = user_prompt.to_lowercase();
-        let complex_keywords = ["create", "build", "implement", "develop", "setup", "add", "design", "refactor", "migrate"];
-        let has_complex_keywords = complex_keywords.iter().any(|&keyword| user_input_lower.contains(keyword));
-        let is_complex = has_complex_keywords ||
-                        user_input_lower.contains("app") ||
-                        user_input_lower.contains("application") ||
-                        user_input_lower.contains("system") ||
-                        user_input_lower.contains("api") ||
-                        user_input_lower.contains("server") ||
-                        user_input_lower.contains("database");
+        let complex_keywords = [
+            "create",
+            "build",
+            "implement",
+            "develop",
+            "setup",
+            "add",
+            "design",
+            "refactor",
+            "migrate",
+        ];
+        let has_complex_keywords = complex_keywords
+            .iter()
+            .any(|&keyword| user_input_lower.contains(keyword));
+        let is_complex = has_complex_keywords
+            || user_input_lower.contains("app")
+            || user_input_lower.contains("application")
+            || user_input_lower.contains("system")
+            || user_input_lower.contains("api")
+            || user_input_lower.contains("server")
+            || user_input_lower.contains("database");
 
-        if is_complex && self.messages.len() == 2 { // Only for first user message
+        if is_complex && self.messages.len() == 2 {
+            // Only for first user message
             self.messages.push(Message {
                 role: "system".to_string(),
                 content: "This appears to be a complex task. Please start with CREATE_PLAN to break it down into manageable steps.".to_string(),
@@ -1137,7 +1336,8 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                 Ok(stream) => stream,
                 Err(e) => {
                     let mut app_guard = app.lock().await;
-                    app_guard.finish_streaming("Error: Failed to start streaming response".to_string());
+                    app_guard
+                        .finish_streaming("Error: Failed to start streaming response".to_string());
                     return Err(Box::new(e));
                 }
             };
@@ -1179,7 +1379,11 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                     Tool::ReadFile { path } => format!("READ_FILE {}", path),
                     Tool::WriteFile { path, content: _ } => format!("WRITE_FILE {}", path),
                     Tool::AppendFile { path, content: _ } => format!("APPEND_FILE {}", path),
-                    Tool::SearchReplace { path, old_string: _, new_string: _ } => format!("SEARCH_REPLACE {}", path),
+                    Tool::SearchReplace {
+                        path,
+                        old_string: _,
+                        new_string: _,
+                    } => format!("SEARCH_REPLACE {}", path),
                     Tool::DeleteFile { path } => format!("DELETE_FILE {}", path),
                     Tool::ListFiles { path } => format!("LIST_FILES {}", path),
                     Tool::ListFilesRecursive { path } => format!("LIST_FILES_RECURSIVE {}", path),
@@ -1191,12 +1395,21 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                     Tool::GitStatus => "GIT_STATUS".to_string(),
                     Tool::GitDiff => "GIT_DIFF".to_string(),
                     Tool::GitCommit { message } => format!("GIT_COMMIT \"{}\"", message),
-                    Tool::GitLog { count } => format!("GIT_LOG {}", count.map_or("all".to_string(), |n| n.to_string())),
+                    Tool::GitLog { count } => format!(
+                        "GIT_LOG {}",
+                        count.map_or("all".to_string(), |n| n.to_string())
+                    ),
                     Tool::RunLint { language, path: _ } => format!("RUN_LINT {}", language),
                     Tool::RunTests { framework, path: _ } => format!("RUN_TESTS {}", framework),
-                    Tool::InstallPackage { manager, package } => format!("INSTALL_PACKAGE {} {}", manager, package),
-                    Tool::CreatePlan { task, steps } => format!("CREATE_PLAN \"{}\" ({} steps)", task, steps.len()),
-                    Tool::UpdatePlan { completed_step } => format!("UPDATE_PLAN step {}", completed_step),
+                    Tool::InstallPackage { manager, package } => {
+                        format!("INSTALL_PACKAGE {} {}", manager, package)
+                    }
+                    Tool::CreatePlan { task, steps } => {
+                        format!("CREATE_PLAN \"{}\" ({} steps)", task, steps.len())
+                    }
+                    Tool::UpdatePlan { completed_step } => {
+                        format!("UPDATE_PLAN step {}", completed_step)
+                    }
                     Tool::ClearPlan => "CLEAR_PLAN".to_string(),
                 };
                 tool_logs.push(format!("🔧 Attempt {}: Executing {}", attempts, tool_name));
@@ -1233,7 +1446,8 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                 // Check if we should continue or if the task is complete
                 if attempts >= MAX_ATTEMPTS {
                     // Get final response after max attempts (non-streaming for final response)
-                    let (final_response, final_tokens) = crate::llm::ask_llm_with_messages(config, &self.messages).await?;
+                    let (final_response, final_tokens) =
+                        crate::llm::ask_llm_with_messages(config, &self.messages).await?;
                     {
                         let mut app_guard = app.lock().await;
                         app_guard.increment_tokens(final_tokens);
