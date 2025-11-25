@@ -16,14 +16,71 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     Terminal,
 };
+use std::fs;
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::task;
 
+fn create_default_config() -> io::Result<()> {
+    let default_config = r#"# Configuration for the LLM API
+[llm]
+provider = "openai"
+
+api_key = ""
+
+api_base_url = "http://localhost:11434/v1"
+
+# Set to a concrete model name or use AUTODETECT to pick the first model from /v1/models
+model_name = "AUTODETECT"
+
+
+
+# Automation options
+max_attempts = 12
+workspace_root = ""
+shell = "bash"
+post_write_verify = true
+safe_fs = true
+"#;
+
+    fs::write("config.toml", default_config)?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Check if config.toml exists, if not prompt user to create it
+    if !std::path::Path::new("config.toml").exists() {
+        eprintln!("Error: config.toml not found!");
+        eprintln!();
+        eprintln!("A configuration file is required to run this application.");
+        eprintln!("Would you like to create a default config.toml? (y/n)");
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+
+        if input.trim().to_lowercase() == "y" {
+            create_default_config()?;
+            eprintln!();
+            eprintln!("✓ Created config.toml with default values.");
+            eprintln!();
+            eprintln!("IMPORTANT: Please edit config.toml and set your LLM configuration:");
+            eprintln!("  - api_key: Your API key");
+            eprintln!("  - api_base_url: Your LLM API endpoint");
+            eprintln!("  - model_name: The model to use (or 'AUTODETECT')");
+            eprintln!();
+            eprintln!("Run the application again after configuring.");
+            return Ok(());
+        } else {
+            eprintln!();
+            eprintln!("Please create a config.toml file manually.");
+            eprintln!("You can use config_example.toml as a reference.");
+            return Err("Configuration file not found".into());
+        }
+    }
+
     // Load configuration
     let config = Config::from_file("config.toml")?;
 
