@@ -17,13 +17,19 @@ pub struct App {
     pub current_streaming_message: String,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         Self {
             user_input: String::new(),
             conversation: Vec::new(),
             status_message:
-                "Commands: /quit (exit), /stats (usage stats), ↑↓ (scroll conversation)".to_string(),
+                "Commands: /quit, /stats | Keys: ↑↓ (scroll), PgUp/PgDn (page), Home/End (top/bottom)".to_string(),
             tool_logs: Vec::new(),
             is_executing_tool: false,
             current_tool: String::new(),

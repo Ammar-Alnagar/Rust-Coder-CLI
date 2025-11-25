@@ -846,6 +846,12 @@ pub struct Agent {
     messages: Vec<Message>,
 }
 
+impl Default for Agent {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Agent {
     pub fn new() -> Self {
         Self { messages: vec![] }

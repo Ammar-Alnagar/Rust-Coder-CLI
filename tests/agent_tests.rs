@@ -1,0 +1,208 @@
+use rust_tui_coder::agent::{Agent, Tool};
+use std::fs;
+use std::path::Path;
+
+#[test]
+fn test_agent_new() {
+    let _agent = Agent::new();
+    // Agent has private fields so we can only verify construction succeeds
+}
+
+#[test]
+fn test_agent_default() {
+    let _agent = Agent::default();
+    // Agent default constructor works
+}
+
+#[test]
+fn test_tool_read_file() {
+    let test_file = "tmp_rovodev_test_read.txt";
+    fs::write(test_file, "Test content").unwrap();
+
+    let tool = Tool::ReadFile {
+        path: test_file.to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("Test content"));
+
+    fs::remove_file(test_file).ok();
+}
+
+#[test]
+fn test_tool_write_file() {
+    let test_file = "tmp_rovodev_test_write.txt";
+
+    let tool = Tool::WriteFile {
+        path: test_file.to_string(),
+        content: "Hello World!".to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    assert!(Path::new(test_file).exists());
+
+    let content = fs::read_to_string(test_file).unwrap();
+    assert_eq!(content, "Hello World!");
+
+    fs::remove_file(test_file).ok();
+}
+
+#[test]
+fn test_tool_append_file() {
+    let test_file = "tmp_rovodev_test_append.txt";
+    fs::write(test_file, "Initial content\n").unwrap();
+
+    let tool = Tool::AppendFile {
+        path: test_file.to_string(),
+        content: "Appended content".to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+
+    let content = fs::read_to_string(test_file).unwrap();
+    assert!(content.contains("Initial content"));
+    assert!(content.contains("Appended content"));
+
+    fs::remove_file(test_file).ok();
+}
+
+#[test]
+fn test_tool_search_replace() {
+    let test_file = "tmp_rovodev_test_search_replace.txt";
+    fs::write(test_file, "Hello World! World is great.").unwrap();
+
+    let tool = Tool::SearchReplace {
+        path: test_file.to_string(),
+        old_string: "World".to_string(),
+        new_string: "Rust".to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+
+    let content = fs::read_to_string(test_file).unwrap();
+    assert_eq!(content, "Hello Rust! Rust is great.");
+
+    fs::remove_file(test_file).ok();
+}
+
+#[test]
+fn test_tool_delete_file() {
+    let test_file = "tmp_rovodev_test_delete.txt";
+    fs::write(test_file, "To be deleted").unwrap();
+
+    let tool = Tool::DeleteFile {
+        path: test_file.to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    assert!(!Path::new(test_file).exists());
+}
+
+#[test]
+fn test_tool_create_directory() {
+    let test_dir = "tmp_rovodev_test_dir";
+
+    let tool = Tool::CreateDirectory {
+        path: test_dir.to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    assert!(Path::new(test_dir).is_dir());
+
+    fs::remove_dir_all(test_dir).ok();
+}
+
+#[test]
+fn test_tool_list_files() {
+    let test_dir = "tmp_rovodev_test_list";
+    fs::create_dir_all(test_dir).unwrap();
+    fs::write(format!("{}/file1.txt", test_dir), "content1").unwrap();
+    fs::write(format!("{}/file2.txt", test_dir), "content2").unwrap();
+    fs::create_dir(format!("{}/subdir", test_dir)).unwrap();
+
+    let tool = Tool::ListFiles {
+        path: test_dir.to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    assert!(output.contains("file1.txt"));
+    assert!(output.contains("file2.txt"));
+    assert!(output.contains("subdir"));
+
+    fs::remove_dir_all(test_dir).ok();
+}
+
+#[test]
+fn test_tool_list_files_recursive() {
+    let test_dir = "tmp_rovodev_test_recursive";
+    fs::create_dir_all(format!("{}/subdir", test_dir)).unwrap();
+    fs::write(format!("{}/file1.txt", test_dir), "content1").unwrap();
+    fs::write(format!("{}/subdir/file2.txt", test_dir), "content2").unwrap();
+
+    let tool = Tool::ListFilesRecursive {
+        path: test_dir.to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    assert!(output.contains("file1.txt"));
+    assert!(output.contains("file2.txt"));
+
+    fs::remove_dir_all(test_dir).ok();
+}
+
+#[test]
+fn test_tool_run_command() {
+    let tool = Tool::RunCommand {
+        command: "echo 'Hello from test'".to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("Hello from test"));
+}
+
+#[test]
+fn test_tool_execute_code_python() {
+    let tool = Tool::ExecuteCode {
+        language: "python".to_string(),
+        code: "print('Python test')".to_string(),
+    };
+
+    let result = tool.execute();
+    // Python might not be available in all test environments
+    if result.is_ok() {
+        assert!(result.unwrap().contains("Python test"));
+    }
+}
+
+#[test]
+fn test_tool_execute_code_bash() {
+    let tool = Tool::ExecuteCode {
+        language: "bash".to_string(),
+        code: "echo 'Bash test'".to_string(),
+    };
+
+    let result = tool.execute();
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("Bash test"));
+}
+
+// Plan tests moved to tests/plan_tests.rs to avoid race conditions
+
+#[test]
+fn test_tool_git_status() {
+    let tool = Tool::GitStatus;
+    let result = tool.execute();
+    // Git might not be available or this might not be a git repo
+    assert!(result.is_ok());
+}

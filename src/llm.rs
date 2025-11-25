@@ -153,7 +153,7 @@ pub async fn ask_llm_with_messages(
 
     // First, get the raw response to debug
     let mut completion_request = client
-        .post(&format!(
+        .post(format!(
             "{}/chat/completions",
             config.api_base_url.trim_end_matches('/')
         ))
@@ -223,7 +223,7 @@ pub async fn stream_llm_response(
 
     // Create streaming request
     let mut request = client
-        .post(&format!(
+        .post(format!(
             "{}/chat/completions",
             config.api_base_url.trim_end_matches('/')
         ))
