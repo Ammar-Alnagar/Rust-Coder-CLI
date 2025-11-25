@@ -1,6 +1,6 @@
 [package]
 name = "rust_tui_coder"
-version = "1.0.0"
+version = "0.1.0"
 edition = "2021"
 description = "AI-powered terminal coding assistant with interactive TUI, supporting multiple LLMs and comprehensive development tools"
 license = "MIT OR Apache-2.0"
