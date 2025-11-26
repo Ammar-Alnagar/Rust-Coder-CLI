@@ -244,7 +244,7 @@ TOTAL:                94 passed
 - All tests are isolated and clean up after themselves
 
 ### Publishing:
-- Binary name: `rust_tui_coder`
+- Binary name: `rct`
 - Requires `config.toml` for first run
 - See `config_example.toml` for template
 

@@ -201,7 +201,7 @@ cp prompt.md.example prompt.md
 # Edit prompt.md with your preferences
 
 # Start using!
-rust_tui_coder
+rct
 ```
 
 **No breaking changes** - all existing functionality preserved.
