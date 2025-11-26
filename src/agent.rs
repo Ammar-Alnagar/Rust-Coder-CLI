@@ -2,6 +2,7 @@ use crate::config::LlmConfig;
 use crate::llm::Message;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -132,6 +133,29 @@ impl ToolCall {
                 Some(Tool::UpdatePlan { completed_step })
             }
             "CLEAR_PLAN" => Some(Tool::ClearPlan),
+            "GET_TIME" => Some(Tool::GetTime),
+            "GET_OS_INFO" => Some(Tool::GetOsInfo),
+            "COPY_FILE" => {
+                let source = self.parameters.get("source")?.as_str()?.to_string();
+                let destination = self.parameters.get("destination")?.as_str()?.to_string();
+                Some(Tool::CopyFile {
+                    source,
+                    destination,
+                })
+            }
+            "MOVE_FILE" => {
+                let source = self.parameters.get("source")?.as_str()?.to_string();
+                let destination = self.parameters.get("destination")?.as_str()?.to_string();
+                Some(Tool::MoveFile {
+                    source,
+                    destination,
+                })
+            }
+            "RENAME_FILE" => {
+                let old_name = self.parameters.get("old_name")?.as_str()?.to_string();
+                let new_name = self.parameters.get("new_name")?.as_str()?.to_string();
+                Some(Tool::RenameFile { old_name, new_name })
+            }
             _ => None,
         }
     }
@@ -224,6 +248,24 @@ pub enum Tool {
         completed_step: usize,
     },
     ClearPlan,
+
+    // System Information & Time
+    GetTime,
+    GetOsInfo,
+
+    // Enhanced File Operations
+    CopyFile {
+        source: String,
+        destination: String,
+    },
+    MoveFile {
+        source: String,
+        destination: String,
+    },
+    RenameFile {
+        old_name: String,
+        new_name: String,
+    },
 }
 
 impl Tool {
@@ -356,10 +398,18 @@ impl Tool {
                 }
             }
             Tool::RunCommand { command } => {
-                let output = Command::new("sh")
-                    .arg("-c")
-                    .arg(command)
-                            .output()?;
+                // OS-adaptive command execution
+                let output = if cfg!(target_os = "windows") {
+                    Command::new("cmd")
+                        .arg("/C")
+                        .arg(command)
+                        .output()?
+                } else {
+                    Command::new("sh")
+                        .arg("-c")
+                        .arg(command)
+                        .output()?
+                };
 
                 if output.status.success() {
                     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -629,6 +679,90 @@ impl Tool {
                     Ok("No plan.md file found to clear".to_string())
                 }
             }
+
+            // System Information & Time
+            Tool::GetTime => {
+                use std::time::SystemTime;
+                let now = SystemTime::now();
+                let datetime = chrono::Local::now();
+                Ok(format!(
+                    "Current Date & Time:\n\
+                     • Date: {}\n\
+                     • Time: {}\n\
+                     • Timezone: {}\n\
+                     • Unix Timestamp: {}",
+                    datetime.format("%Y-%m-%d"),
+                    datetime.format("%H:%M:%S"),
+                    datetime.format("%Z"),
+                    now.duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                ))
+            }
+
+            Tool::GetOsInfo => {
+                let os = env::consts::OS;
+                let arch = env::consts::ARCH;
+                let family = env::consts::FAMILY;
+
+                // Detect specific OS details
+                let os_details = match os {
+                    "linux" => {
+                        // Try to get distribution info
+                        let distro = fs::read_to_string("/etc/os-release")
+                            .ok()
+                            .and_then(|content| {
+                                content.lines()
+                                    .find(|line| line.starts_with("PRETTY_NAME="))
+                                    .map(|line| line.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+                            })
+                            .unwrap_or_else(|| "Unknown Linux Distribution".to_string());
+                        format!("Linux ({})", distro)
+                    }
+                    "macos" => "macOS".to_string(),
+                    "windows" => "Windows".to_string(),
+                    other => other.to_string(),
+                };
+
+                // Get shell command separator based on OS
+                let shell_type = if os == "windows" { "cmd.exe / PowerShell" } else { "bash / sh" };
+                let path_sep = std::path::MAIN_SEPARATOR;
+                let cmd_sep = if os == "windows" { "&" } else { "&&" };
+
+                Ok(format!(
+                    "Operating System Information:\n\
+                     • OS: {}\n\
+                     • Architecture: {}\n\
+                     • OS Family: {}\n\
+                     • Shell: {}\n\
+                     • Path Separator: {}\n\
+                     • Command Separator: {}\n\
+                     • Temp Directory: {}",
+                    os_details,
+                    arch,
+                    family,
+                    shell_type,
+                    path_sep,
+                    cmd_sep,
+                    env::temp_dir().display()
+                ))
+            }
+
+            // Enhanced File Operations
+            Tool::CopyFile { source, destination } => {
+                fs::copy(source, destination)?;
+                Ok(format!("Successfully copied '{}' to '{}'", source, destination))
+            }
+
+            Tool::MoveFile { source, destination } => {
+                fs::rename(source, destination)?;
+                Ok(format!("Successfully moved '{}' to '{}'", source, destination))
+            }
+
+            Tool::RenameFile { old_name, new_name } => {
+                fs::rename(old_name, new_name)?;
+                Ok(format!("Successfully renamed '{}' to '{}'", old_name, new_name))
+            }
         }
     }
 
@@ -858,7 +992,31 @@ impl Agent {
     }
 
     fn get_system_prompt() -> String {
-        r#"You are an advanced AI coding assistant with comprehensive access to development tools. You excel at software development, debugging, and project management. You MUST use tools to complete tasks - never just describe what you would do.
+        // Load custom prompt if it exists
+        let custom_prompt = fs::read_to_string("prompt.md")
+            .ok()
+            .map(|content| format!("\n\n## CUSTOM USER INSTRUCTIONS\n\n{}\n", content))
+            .unwrap_or_default();
+
+        format!(
+            r#"You are an advanced AI coding assistant with comprehensive access to development tools. You excel at software development, debugging, and project management. You MUST use tools to complete tasks - never just describe what you would do.
+
+## ReAct PATTERN: REASON → ACT → OBSERVE
+
+**You MUST follow the ReAct (Reasoning + Acting) pattern for all tasks:**
+
+1. **REASON**: Before acting, explicitly think through what needs to be done
+2. **ACT**: Execute the appropriate tool to accomplish the task
+3. **OBSERVE**: Analyze the tool's output and decide next steps
+
+**Example ReAct Pattern:**
+```
+REASONING: I need to understand the project structure before making changes. Let me list the files first.
+ACTION: TOOL: {{"name": "LIST_FILES", "parameters": {{"path": "."}}}}
+[Tool executes and returns result]
+OBSERVATION: I can see there's a src/ directory with main.rs. Now I'll read it to understand the current implementation.
+ACTION: TOOL: {{"name": "READ_FILE", "parameters": {{"path": "src/main.rs"}}}}
+```
 
 **CRITICAL FIRST STEP: For complex tasks requiring 3+ steps or multiple components, ALWAYS start with CREATE_PLAN as your very first tool call. Do not execute any other tools until the plan is created.**
 
@@ -921,6 +1079,15 @@ impl Agent {
     - pip install <package>
     - go get <package>
 
+### System Information
+23. **GET_TIME** - Get current date, time, and timezone information from the system
+24. **GET_OS_INFO** - Get operating system details (OS type, architecture, shell, path separators)
+
+### Enhanced File Operations
+25. **COPY_FILE** `<source> <destination>` - Copy a file from source to destination
+26. **MOVE_FILE** `<source> <destination>` - Move/relocate a file or directory
+27. **RENAME_FILE** `<old_name> <new_name>` - Rename a file or directory
+
 ## PLANNING WORKFLOW - REQUIRED FOR COMPLEX TASKS
 
 **MANDATORY PLANNING REQUIREMENT:**
@@ -947,17 +1114,17 @@ impl Agent {
 
 1. **FIRST RESPONSE**: Always start with CREATE_PLAN for complex tasks
    ```
-   TOOL: {"name": "CREATE_PLAN", "parameters": {"task": "Build a React todo app", "steps": ["Set up React project", "Create components", "Implement state management", "Add styling", "Test functionality"]}}
+   TOOL: {{"name": "CREATE_PLAN", "parameters": {{"task": "Build a React todo app", "steps": ["Set up React project", "Create components", "Implement state management", "Add styling", "Test functionality"]}}}}
    ```
 
 2. **EXECUTE STEPS**: Complete each step one by one
    ```
-   TOOL: {"name": "UPDATE_PLAN", "parameters": {"completed_step": 1}}
+   TOOL: {{"name": "UPDATE_PLAN", "parameters": {{"completed_step": 1}}}}
    ```
 
 3. **FINAL STEP**: Clean up when done
    ```
-   TOOL: {"name": "CLEAR_PLAN", "parameters": {}}
+   TOOL: {{"name": "CLEAR_PLAN", "parameters": {{}}}}
    ```
 
 **DECISION TREE FOR TASK HANDLING:**
@@ -984,8 +1151,8 @@ EXAMPLES:
 
 **PRIMARY FORMAT: Use JSON tool calls for maximum reliability:**
 ```json
-TOOL: {"name": "READ_FILE", "parameters": {"path": "/path/to/file.txt"}}
-TOOL: {"name": "CREATE_PLAN", "parameters": {"task": "Task description", "steps": ["Step 1", "Step 2", "Step 3"]}}
+TOOL: {{"name": "READ_FILE", "parameters": {{"path": "/path/to/file.txt"}}}}
+TOOL: {{"name": "CREATE_PLAN", "parameters": {{"task": "Task description", "steps": ["Step 1", "Step 2", "Step 3"]}}}}
 ```
 
 **Legacy format (still supported):**
@@ -1038,39 +1205,72 @@ TOOL: CREATE_PLAN "Task description" "Step 1" "Step 2" "Step 3"
 ## EXAMPLES
 
 ### Planning:
-TOOL: {"name": "CREATE_PLAN", "parameters": {"task": "Build a React component", "steps": ["Create component file", "Add state management", "Implement event handlers", "Add styling", "Test component"]}}
-TOOL: {"name": "UPDATE_PLAN", "parameters": {"completed_step": 1}}
-TOOL: {"name": "CLEAR_PLAN", "parameters": {}}
+TOOL: {{"name": "CREATE_PLAN", "parameters": {{"task": "Build a React component", "steps": ["Create component file", "Add state management", "Implement event handlers", "Add styling", "Test component"]}}}}
+TOOL: {{"name": "UPDATE_PLAN", "parameters": {{"completed_step": 1}}}}
+TOOL: {{"name": "CLEAR_PLAN", "parameters": {{}}}}
 
 ### File Operations:
-TOOL: {"name": "READ_FILE", "parameters": {"path": "src/main.rs"}}
-TOOL: {"name": "WRITE_FILE", "parameters": {"path": "hello.txt", "content": "Hello World!"}}
-TOOL: {"name": "SEARCH_REPLACE", "parameters": {"path": "src/main.rs", "old_string": "fn main() {", "new_string": "fn main() {\n    println!(\"Hello!\");"}}
+TOOL: {{"name": "READ_FILE", "parameters": {{"path": "src/main.rs"}}}}
+TOOL: {{"name": "WRITE_FILE", "parameters": {{"path": "hello.txt", "content": "Hello World!"}}}}
+TOOL: {{"name": "SEARCH_REPLACE", "parameters": {{"path": "src/main.rs", "old_string": "fn main() {{", "new_string": "fn main() {{\n    println!(\"Hello!\");"}}}}
 
 ### Development Tasks:
-TOOL: {"name": "LIST_FILES", "parameters": {"path": "."}}
-TOOL: {"name": "GREP_SEARCH", "parameters": {"pattern": "TODO|FIXME", "path": "src/"}}
-TOOL: {"name": "EXECUTE_CODE", "parameters": {"language": "rust", "code": "fn main() { println!(\"test\"); }"}}
-TOOL: {"name": "RUN_LINT", "parameters": {"language": "rust"}}
+TOOL: {{"name": "LIST_FILES", "parameters": {{"path": "."}}}}
+TOOL: {{"name": "GREP_SEARCH", "parameters": {{"pattern": "TODO|FIXME", "path": "src/"}}}}
+TOOL: {{"name": "EXECUTE_CODE", "parameters": {{"language": "rust", "code": "fn main() {{ println!(\"test\"); }}"}}}}
+TOOL: {{"name": "RUN_LINT", "parameters": {{"language": "rust"}}}}
 
 ### Quality Assurance:
-TOOL: {"name": "RUN_TESTS", "parameters": {"framework": "cargo"}}
-TOOL: {"name": "GIT_STATUS", "parameters": {}}
-TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}}
+TOOL: {{"name": "RUN_TESTS", "parameters": {{"framework": "cargo"}}}}
+TOOL: {{"name": "GIT_STATUS", "parameters": {{}}}}
+TOOL: {{"name": "RUN_COMMAND", "parameters": {{"command": "cargo build --release"}}}}
+
+### System Information & File Management:
+TOOL: {{"name": "GET_TIME", "parameters": {{}}}}
+TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
+TOOL: {{"name": "COPY_FILE", "parameters": {{"source": "file.txt", "destination": "backup/file.txt"}}}}
+TOOL: {{"name": "MOVE_FILE", "parameters": {{"source": "old/path/file.txt", "destination": "new/path/file.txt"}}}}
+TOOL: {{"name": "RENAME_FILE", "parameters": {{"old_name": "oldname.txt", "new_name": "newname.txt"}}}}
+
+## OS-ADAPTIVE EXECUTION
+
+**The system automatically detects the operating system and adapts commands accordingly:**
+
+- **Windows**: Uses cmd.exe/PowerShell, backslash paths, different command syntax
+- **Linux**: Uses bash/sh, forward slash paths, Unix commands
+- **macOS**: Similar to Linux with some macOS-specific tools
+
+**Use GET_OS_INFO to check the current environment before executing OS-specific commands.**
+
+**Examples of OS-adaptive commands:**
+```
+# First check the OS
+TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
+
+# Then adapt commands based on OS
+# Windows: dir, copy, move, del
+# Linux/Mac: ls, cp, mv, rm
+```
 
 ## CRITICAL GUIDELINES
 
 - **PLAN FIRST for complex tasks** - Always use CREATE_PLAN as your FIRST tool call for tasks requiring 3+ steps
 - **ALWAYS use tools** - Never describe actions without executing them
-- **Use JSON format** - Prefer `TOOL: {"name": "TOOL_NAME", "parameters": {...}}` over legacy format
+- **Use JSON format** - Prefer `TOOL: {{"name": "TOOL_NAME", "parameters": {{...}}}}` over legacy format
 - **Execute immediately** - Do not explain what you would do, just call the tool
 - **Verify work** - Read files after writing, list directories after changes
 - **Handle errors gracefully** - Try alternative approaches when tools fail
 - **Be precise** - Use exact string matching for SEARCH_REPLACE
 - **Think systematically** - Plan before acting, verify after completion
 - **Code quality matters** - Use linters and tests to maintain standards
+- **Use ReAct pattern** - Always REASON before you ACT, then OBSERVE the results
+- **Check OS compatibility** - Use GET_OS_INFO when executing OS-specific commands
+- **Leverage time awareness** - Use GET_TIME when timestamps or scheduling matters
 
-**REMEMBER: For complex tasks, your FIRST response MUST contain CREATE_PLAN. For simple tasks, use tools directly. Your responses should contain actual tool calls that will be executed, not descriptions of tool usage.**"#.to_string()
+**REMEMBER: For complex tasks, your FIRST response MUST contain CREATE_PLAN. For simple tasks, use tools directly. Your responses should contain actual tool calls that will be executed, not descriptions of tool usage.**{}
+"#,
+            custom_prompt
+        )
     }
 
     fn parse_tool_call(&self, response: &str) -> Option<Tool> {
@@ -1417,6 +1617,19 @@ TOOL: {"name": "RUN_COMMAND", "parameters": {"command": "cargo build --release"}
                         format!("UPDATE_PLAN step {}", completed_step)
                     }
                     Tool::ClearPlan => "CLEAR_PLAN".to_string(),
+                    Tool::GetTime => "GET_TIME".to_string(),
+                    Tool::GetOsInfo => "GET_OS_INFO".to_string(),
+                    Tool::CopyFile {
+                        source,
+                        destination,
+                    } => format!("COPY_FILE {} -> {}", source, destination),
+                    Tool::MoveFile {
+                        source,
+                        destination,
+                    } => format!("MOVE_FILE {} -> {}", source, destination),
+                    Tool::RenameFile { old_name, new_name } => {
+                        format!("RENAME_FILE {} -> {}", old_name, new_name)
+                    }
                 };
                 tool_logs.push(format!("🔧 Attempt {}: Executing {}", attempts, tool_name));
 

@@ -1,0 +1,57 @@
+# Custom Agent Instructions
+
+This is an example `prompt.md` file. Copy this to `prompt.md` in your working directory to customize the AI assistant's behavior.
+
+## Code Style Preferences
+
+- Use clear, descriptive variable names (no single letters except for loops)
+- Add docstrings/comments for all functions and classes
+- Follow language-specific style guides:
+  - Python: PEP 8
+  - JavaScript: Airbnb Style Guide
+  - Rust: Official Rust Style Guide
+
+## Project Conventions
+
+- Use semantic commit messages (feat:, fix:, docs:, etc.)
+- Write unit tests for all new functions
+- Keep functions small and focused (single responsibility)
+- Prefer composition over inheritance
+
+## Communication Style
+
+- Be concise but thorough
+- Always explain your reasoning before taking action (ReAct pattern)
+- Show code examples when explaining concepts
+- Ask for clarification if requirements are ambiguous
+
+## Technology Preferences
+
+- **Web**: Prefer TypeScript over JavaScript
+- **Backend**: Prefer async/await over callbacks
+- **Testing**: Use pytest for Python, jest for JavaScript
+- **Database**: Use prepared statements for SQL queries
+
+## Security
+
+- Never commit sensitive data (API keys, passwords, etc.)
+- Validate all user inputs
+- Use parameterized queries for database access
+- Keep dependencies up to date
+
+## Documentation
+
+- Update README.md when adding new features
+- Document all public APIs
+- Include usage examples in documentation
+- Keep CHANGELOG.md current
+
+## Specific Instructions
+
+[Add your project-specific instructions here]
+
+Example:
+- This project uses MongoDB, not PostgreSQL
+- API responses should always include error codes
+- All dates should be in ISO 8601 format
+- Use Zod for runtime type validation in TypeScript
