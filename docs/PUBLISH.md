@@ -48,14 +48,14 @@ Users will be able to install the binary using:
 cargo install rust_tui_coder
 ```
 
-This will install the `rust_tui_coder` binary to `~/.cargo/bin/` (which should be in PATH).
+This will install the `rct` binary to `~/.cargo/bin/` (which should be in PATH).
 
 ## Usage After Installation
 
 After installation, users can run:
 
 ```bash
-rust_tui_coder
+rct
 ```
 
 The application will look for a `config.toml` file in the current directory.
@@ -117,7 +117,7 @@ The following are excluded from the published package (see `Cargo.toml`):
 
 1. **Configuration Required**: Users need to create a `config.toml` file with their LLM API credentials
 2. **First Run**: Include instructions in README for first-time setup
-3. **Binary Name**: The binary is named `rust_tui_coder` and can be renamed after installation if desired
+3. **Binary Name**: The binary is named `rct` and can be renamed after installation if desired
 4. **Dependencies**: All dependencies are properly specified in Cargo.toml
 5. **Platform Support**: Works on Linux, macOS, and Windows (tested on Linux)
 

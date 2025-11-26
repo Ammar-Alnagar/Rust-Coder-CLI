@@ -66,7 +66,7 @@ cargo install rust_tui_coder
 git clone https://github.com/Ammar-Alnagar/Rust-Coder-CLI.git
 cd Rust-Coder-CLI
 cargo build --release
-./target/release/rust_tui_coder
+./target/release/rct
 ```
 
 ## Configuration
@@ -105,7 +105,7 @@ safe_fs = true
 ### Starting the Application
 
 ```bash
-rust_tui_coder
+rct
 ```
 
 ### Basic Commands
@@ -263,7 +263,7 @@ See [EXAMPLES.md](EXAMPLES.md) for 30+ detailed usage examples including:
 **Config not found**
 ```bash
 # Create default config
-rust_tui_coder
+rct
 # Follow the prompts to create config.toml
 ```
 

@@ -1,6 +1,6 @@
 [package]
 name = "rust_tui_coder"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 description = "AI-powered terminal coding assistant with interactive TUI, supporting multiple LLMs and comprehensive development tools"
 license = "MIT OR Apache-2.0"
@@ -21,7 +21,7 @@ exclude = [
 ]
 
 [[bin]]
-name = "rust_tui_coder"
+name = "rct"
 path = "src/main.rs"
 
 [dependencies]

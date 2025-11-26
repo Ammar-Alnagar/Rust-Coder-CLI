@@ -68,7 +68,7 @@ This guide helps you diagnose and fix common issues with Rust TUI Coder.
    git clone https://github.com/yourusername/rust_tui_coder.git
    cd rust_tui_coder
    cargo build --release
-   ./target/release/rust_tui_coder
+   ./target/release/rct
    ```
 
 ---
@@ -250,7 +250,7 @@ curl -I https://api.openai.com/v1/models
 4. **Use proxy (if needed)**
    ```bash
    export HTTPS_PROXY=http://proxy.company.com:8080
-   rust_tui_coder
+   rct
    ```
 
 ---
@@ -426,7 +426,7 @@ pwd
 1. **Set TERM variable**
    ```bash
    export TERM=xterm-256color
-   rust_tui_coder
+   rct
    ```
 
 2. **Use compatible terminal**
@@ -573,7 +573,7 @@ top | grep rust_tui_coder
 2. **Check logs**
    ```bash
    # Run with backtrace
-   RUST_BACKTRACE=1 rust_tui_coder
+   RUST_BACKTRACE=1 rct
    ```
 
 3. **Report bug**
@@ -667,10 +667,10 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ```bash
 # Run with verbose output
-RUST_LOG=debug rust_tui_coder
+RUST_LOG=debug rct
 
 # Or with backtrace
-RUST_BACKTRACE=full rust_tui_coder
+RUST_BACKTRACE=full rct
 ```
 
 ### Test API Connection Manually
@@ -699,8 +699,8 @@ curl https://api.anthropic.com/v1/messages \
 cargo install --list | grep rust_tui_coder
 
 # Verify binary
-which rust_tui_coder
-rust_tui_coder --version  # If version flag is implemented
+which rct
+rct --version  # If version flag is implemented
 ```
 
 ---
@@ -743,7 +743,7 @@ If you're still experiencing issues:
 **Solution:** Application runs in the directory where you launch it
 ```bash
 cd /path/to/your/project
-rust_tui_coder
+rct
 ```
 
 ---

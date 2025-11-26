@@ -50,7 +50,7 @@ model_name = "gpt-4"
 ### Run
 
 ```bash
-rust_tui_coder
+rct
 ```
 
 ---

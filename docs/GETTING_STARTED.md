@@ -30,7 +30,7 @@ cd rust_tui_coder
 # Build the project
 cargo build --release
 
-# The binary will be at target/release/rust_tui_coder
+# The binary will be at target/release/rct
 ```
 
 ## Configuration
@@ -100,13 +100,13 @@ export LLM_MODEL_NAME="gpt-4"
 ### Launch the Application
 
 ```bash
-rust_tui_coder
+rct
 ```
 
 Or if built from source:
 
 ```bash
-./target/release/rust_tui_coder
+./target/release/rct
 ```
 
 ### Initial Screen
@@ -382,7 +382,7 @@ The app operates in the directory where you launch it. To work on a specific pro
 
 ```bash
 cd /path/to/your/project
-rust_tui_coder
+rct
 ```
 
 ### Multiple Projects
@@ -391,7 +391,7 @@ Create a `config.toml` in each project directory, or use environment variables:
 
 ```bash
 cd project1
-LLM_MODEL_NAME="gpt-3.5-turbo" rust_tui_coder
+LLM_MODEL_NAME="gpt-3.5-turbo" rct
 ```
 
 ## Next Steps
