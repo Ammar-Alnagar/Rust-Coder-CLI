@@ -124,7 +124,7 @@ cargo install rust_tui_coder
 
 **Usage**:
 ```bash
-rust_tui_coder
+rct
 ```
 
 **Publishing Steps** (see `PUBLISH.md` for details):

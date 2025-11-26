@@ -138,7 +138,7 @@ model_name = "gpt-4"
 EOF
 
 # Run the application
-rust_tui_coder
+rct
 ```
 
 ## Support and Issues

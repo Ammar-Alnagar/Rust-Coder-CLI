@@ -568,7 +568,7 @@ If applicable, add screenshots or error logs
 
 2. **Use rust-gdb or rust-lldb**
    ```bash
-   rust-gdb target/debug/rust_tui_coder
+   rust-gdb target/debug/rct
    ```
 
 3. **Check tool logs in app**

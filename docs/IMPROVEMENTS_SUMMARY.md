@@ -154,7 +154,7 @@ cargo install rust_tui_coder
 ### Binary Usage
 After installation, users can run:
 ```bash
-rust_tui_coder
+rct
 ```
 
 ## 5. Documentation Created 

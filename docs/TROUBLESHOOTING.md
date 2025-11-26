@@ -542,7 +542,7 @@ pwd
 **Diagnostic:**
 ```bash
 # Check memory
-top | grep rust_tui_coder
+top | grep rct
 ```
 
 **Solutions:**

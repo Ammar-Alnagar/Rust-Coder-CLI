@@ -297,7 +297,7 @@ cp prompt.md.example prompt.md
 nano prompt.md  # Edit to your preferences
 
 # Start using new features immediately!
-rust_tui_coder
+rct
 ```
 
 ---
@@ -348,7 +348,7 @@ ACTION: [Uses COPY_FILE for each one]
 echo "Always explain your code in detail" > prompt.md
 
 # The AI will now follow your instruction!
-rust_tui_coder
+rct
 ```
 
 ---
