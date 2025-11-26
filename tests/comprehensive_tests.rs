@@ -10,7 +10,9 @@ fn test_end_to_end_file_operations() {
     let create_dir = Tool::CreateDirectory {
         path: test_dir.to_string(),
     };
-    assert!(create_dir.execute().is_ok());
+    assert!(create_dir
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Write multiple files
     for i in 1..=3 {
@@ -18,14 +20,16 @@ fn test_end_to_end_file_operations() {
             path: format!("{}/file{}.txt", test_dir, i),
             content: format!("Content for file {}", i),
         };
-        assert!(write.execute().is_ok());
+        assert!(write
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .is_ok());
     }
 
     // List files
     let list = Tool::ListFiles {
         path: test_dir.to_string(),
     };
-    let result = list.execute();
+    let result = list.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     let output = result.unwrap();
     assert!(output.contains("file1.txt"));
@@ -36,7 +40,7 @@ fn test_end_to_end_file_operations() {
     let read = Tool::ReadFile {
         path: format!("{}/file1.txt", test_dir),
     };
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("Content for file 1"));
 
@@ -46,13 +50,15 @@ fn test_end_to_end_file_operations() {
         old_string: "Content".to_string(),
         new_string: "Modified".to_string(),
     };
-    assert!(replace.execute().is_ok());
+    assert!(replace
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Verify modification
     let read2 = Tool::ReadFile {
         path: format!("{}/file1.txt", test_dir),
     };
-    let result2 = read2.execute();
+    let result2 = read2.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result2.is_ok());
     assert!(result2.unwrap().contains("Modified for file 1"));
 
@@ -110,20 +116,24 @@ fn test_nested_directory_operations() {
     let create = Tool::CreateDirectory {
         path: nested_path.clone(),
     };
-    assert!(create.execute().is_ok());
+    assert!(create
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Write file in nested location
     let write = Tool::WriteFile {
         path: format!("{}/deep_file.txt", nested_path),
         content: "Deep content".to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // List recursively
     let list_recursive = Tool::ListFilesRecursive {
         path: base_dir.to_string(),
     };
-    let result = list_recursive.execute();
+    let result = list_recursive.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("deep_file.txt"));
 
@@ -137,7 +147,7 @@ fn test_command_execution() {
     let cmd = Tool::RunCommand {
         command: "echo 'test output'".to_string(),
     };
-    let result = cmd.execute();
+    let result = cmd.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("test output"));
 
@@ -145,7 +155,7 @@ fn test_command_execution() {
     let cmd2 = Tool::RunCommand {
         command: "echo 'hello' | tr 'h' 'H'".to_string(),
     };
-    let result2 = cmd2.execute();
+    let result2 = cmd2.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result2.is_ok());
     assert!(result2.unwrap().contains("Hello"));
 }
@@ -159,7 +169,9 @@ fn test_file_append_multiple_times() {
         path: test_file.to_string(),
         content: "Line 1\n".to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Append multiple times
     for i in 2..=5 {
@@ -167,14 +179,16 @@ fn test_file_append_multiple_times() {
             path: test_file.to_string(),
             content: format!("Line {}\n", i),
         };
-        assert!(append.execute().is_ok());
+        assert!(append
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .is_ok());
     }
 
     // Verify all lines present
     let read = Tool::ReadFile {
         path: test_file.to_string(),
     };
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     let content = result.unwrap();
 
@@ -194,7 +208,9 @@ fn test_search_replace_multiple_occurrences() {
         path: test_file.to_string(),
         content: content.to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Replace all occurrences
     let replace = Tool::SearchReplace {
@@ -202,13 +218,15 @@ fn test_search_replace_multiple_occurrences() {
         old_string: "foo".to_string(),
         new_string: "FOO".to_string(),
     };
-    assert!(replace.execute().is_ok());
+    assert!(replace
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Verify all replaced
     let read = Tool::ReadFile {
         path: test_file.to_string(),
     };
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     let new_content = result.unwrap();
     assert!(new_content.contains("FOO bar FOO baz FOO"));
@@ -223,14 +241,18 @@ fn test_tool_error_handling() {
     let read = Tool::ReadFile {
         path: "tmp_rovodev_nonexistent.txt".to_string(),
     };
-    assert!(read.execute().is_err());
+    assert!(read
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_err());
 
     // Try to append to non-existent file
     let append = Tool::AppendFile {
         path: "tmp_rovodev_nonexistent.txt".to_string(),
         content: "content".to_string(),
     };
-    assert!(append.execute().is_err());
+    assert!(append
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_err());
 
     // Try to replace in non-existent file
     let replace = Tool::SearchReplace {
@@ -238,7 +260,9 @@ fn test_tool_error_handling() {
         old_string: "old".to_string(),
         new_string: "new".to_string(),
     };
-    assert!(replace.execute().is_err());
+    assert!(replace
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_err());
 }
 
 // Plan lifecycle test moved to tests/plan_tests.rs to avoid race conditions
@@ -284,7 +308,9 @@ fn test_concurrent_file_operations() {
             path: file.clone(),
             content: format!("Content {}", i + 1),
         };
-        assert!(write.execute().is_ok());
+        assert!(write
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .is_ok());
     }
 
     // Verify all exist

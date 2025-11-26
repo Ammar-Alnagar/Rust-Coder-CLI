@@ -24,7 +24,7 @@ fn test_tool_create_plan() {
         ],
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok(), "CreatePlan should succeed: {:?}", result);
 
     // Add a small delay to ensure file system operations complete
@@ -60,7 +60,7 @@ fn test_tool_update_plan() {
         task: "Test Task".to_string(),
         steps: vec!["Step 1".to_string(), "Step 2".to_string()],
     };
-    let create_result = create_tool.execute();
+    let create_result = create_tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(
         create_result.is_ok(),
         "CreatePlan should succeed: {:?}",
@@ -77,7 +77,7 @@ fn test_tool_update_plan() {
 
     // Then update it
     let update_tool = Tool::UpdatePlan { completed_step: 1 };
-    let result = update_tool.execute();
+    let result = update_tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok(), "UpdatePlan should succeed: {:?}", result);
 
     let content = fs::read_to_string("plan.md").unwrap();
@@ -102,7 +102,7 @@ fn test_tool_clear_plan() {
         task: "Test Task".to_string(),
         steps: vec!["Step 1".to_string()],
     };
-    let create_result = create_tool.execute();
+    let create_result = create_tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(
         create_result.is_ok(),
         "CreatePlan should succeed: {:?}",
@@ -119,7 +119,7 @@ fn test_tool_clear_plan() {
 
     // Then clear it
     let clear_tool = Tool::ClearPlan;
-    let result = clear_tool.execute();
+    let result = clear_tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok(), "ClearPlan should succeed: {:?}", result);
 
     // Add a small delay to ensure file system operations complete
@@ -148,7 +148,12 @@ fn test_plan_lifecycle() {
             "Deploy".to_string(),
         ],
     };
-    assert!(create.execute().is_ok(), "CreatePlan should succeed");
+    assert!(
+        create
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .is_ok(),
+        "CreatePlan should succeed"
+    );
 
     std::thread::sleep(std::time::Duration::from_millis(50));
 
@@ -156,7 +161,9 @@ fn test_plan_lifecycle() {
     for i in 1..=4 {
         let update = Tool::UpdatePlan { completed_step: i };
         assert!(
-            update.execute().is_ok(),
+            update
+                .execute(&rust_tui_coder::config::WebConfig::default())
+                .is_ok(),
             "UpdatePlan step {} should succeed",
             i
         );
@@ -171,7 +178,12 @@ fn test_plan_lifecycle() {
 
     // Clear plan
     let clear = Tool::ClearPlan;
-    assert!(clear.execute().is_ok(), "ClearPlan should succeed");
+    assert!(
+        clear
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .is_ok(),
+        "ClearPlan should succeed"
+    );
 
     std::thread::sleep(std::time::Duration::from_millis(50));
 
@@ -193,7 +205,7 @@ fn test_plan_with_empty_steps() {
         task: "Task with no steps".to_string(),
         steps: vec![],
     };
-    let result = create.execute();
+    let result = create.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok(), "CreatePlan with empty steps should succeed");
 
     std::thread::sleep(std::time::Duration::from_millis(50));
@@ -222,13 +234,18 @@ fn test_plan_update_nonexistent_step() {
         task: "Test Task".to_string(),
         steps: vec!["Step 1".to_string(), "Step 2".to_string()],
     };
-    assert!(create.execute().is_ok(), "CreatePlan should succeed");
+    assert!(
+        create
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .is_ok(),
+        "CreatePlan should succeed"
+    );
 
     std::thread::sleep(std::time::Duration::from_millis(50));
 
     // Try to update step 5 (doesn't exist)
     let update = Tool::UpdatePlan { completed_step: 5 };
-    let result = update.execute();
+    let result = update.execute(&rust_tui_coder::config::WebConfig::default());
     // Should still succeed but not mark anything
     assert!(
         result.is_ok(),
@@ -248,7 +265,7 @@ fn test_clear_nonexistent_plan() {
 
     // Try to clear non-existent plan
     let clear = Tool::ClearPlan;
-    let result = clear.execute();
+    let result = clear.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(
         result.is_ok(),
         "ClearPlan should succeed even if plan doesn't exist"
@@ -268,7 +285,7 @@ fn test_update_plan_before_create() {
 
     // Try to update without creating first
     let update = Tool::UpdatePlan { completed_step: 1 };
-    let result = update.execute();
+    let result = update.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(
         result.is_err(),
         "UpdatePlan should fail if plan doesn't exist"
@@ -291,7 +308,7 @@ fn test_plan_with_special_characters() {
             "Step with 'quotes'".to_string(),
         ],
     };
-    let result = create.execute();
+    let result = create.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(
         result.is_ok(),
         "CreatePlan with special characters should succeed"

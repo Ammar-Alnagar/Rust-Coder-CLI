@@ -12,13 +12,15 @@ fn test_empty_file_operations() {
         path: test_file.to_string(),
         content: String::new(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Read empty file
     let read = Tool::ReadFile {
         path: test_file.to_string(),
     };
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
 
     // Append to empty file
@@ -26,7 +28,9 @@ fn test_empty_file_operations() {
         path: test_file.to_string(),
         content: "Added content".to_string(),
     };
-    assert!(append.execute().is_ok());
+    assert!(append
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     fs::remove_file(test_file).ok();
 }
@@ -42,12 +46,14 @@ fn test_special_characters_in_content() {
         path: test_file.to_string(),
         content: special_content.to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let read = Tool::ReadFile {
         path: test_file.to_string(),
     };
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("$pecial"));
 
@@ -64,12 +70,14 @@ fn test_unicode_content() {
         path: test_file.to_string(),
         content: unicode_content.to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let read = Tool::ReadFile {
         path: test_file.to_string(),
     };
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     let content = result.unwrap();
     assert!(content.contains("世界"));
@@ -91,7 +99,10 @@ fn test_very_long_filenames() {
     };
 
     // This might fail on some filesystems, which is acceptable
-    if write.execute().is_ok() {
+    if write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok()
+    {
         assert!(std::path::Path::new(&long_filename).exists());
         fs::remove_file(&long_filename).ok();
     }
@@ -110,12 +121,16 @@ fn test_path_with_spaces() {
         path: file_path.clone(),
         content: "Content".to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let read = Tool::ReadFile {
         path: file_path.clone(),
     };
-    assert!(read.execute().is_ok());
+    assert!(read
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     fs::remove_dir_all(test_dir).ok();
 }
@@ -130,19 +145,23 @@ fn test_search_replace_with_special_chars() {
         path: test_file.to_string(),
         content: content.to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let replace = Tool::SearchReplace {
         path: test_file.to_string(),
         old_string: "$100.00".to_string(),
         new_string: "$150.00".to_string(),
     };
-    assert!(replace.execute().is_ok());
+    assert!(replace
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let read = Tool::ReadFile {
         path: test_file.to_string(),
     };
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("$150.00"));
 
@@ -157,7 +176,9 @@ fn test_search_replace_not_found() {
         path: test_file.to_string(),
         content: "Hello World".to_string(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let replace = Tool::SearchReplace {
         path: test_file.to_string(),
@@ -166,7 +187,9 @@ fn test_search_replace_not_found() {
     };
 
     // Should fail because old string doesn't exist
-    assert!(replace.execute().is_err());
+    assert!(replace
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_err());
 
     fs::remove_file(test_file).ok();
 }
@@ -266,7 +289,9 @@ fn test_delete_directory_with_content() {
     let delete = Tool::DeleteFile {
         path: test_dir.to_string(),
     };
-    assert!(delete.execute().is_ok());
+    assert!(delete
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     assert!(!std::path::Path::new(test_dir).exists());
 }
@@ -277,7 +302,7 @@ fn test_command_with_error() {
         command: "exit 1".to_string(),
     };
 
-    let result = cmd.execute();
+    let result = cmd.execute(&rust_tui_coder::config::WebConfig::default());
     // Command executes but returns failure status
     assert!(result.is_ok());
     assert!(result.unwrap().contains("failed"));
@@ -290,7 +315,7 @@ fn test_plan_with_empty_steps() {
         steps: vec![],
     };
 
-    let result = create.execute();
+    let result = create.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
 
     let content = fs::read_to_string("plan.md").unwrap();
@@ -306,11 +331,13 @@ fn test_update_nonexistent_plan_step() {
         task: "Test".to_string(),
         steps: vec!["Step 1".to_string(), "Step 2".to_string()],
     };
-    create.execute().ok();
+    create
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .ok();
 
     // Try to update step 5 (doesn't exist)
     let update = Tool::UpdatePlan { completed_step: 5 };
-    let result = update.execute();
+    let result = update.execute(&rust_tui_coder::config::WebConfig::default());
 
     // Should still succeed but won't find the step
     assert!(result.is_ok());
@@ -353,7 +380,9 @@ fn test_nested_path_creation() {
         content: "Nested content".to_string(),
     };
 
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
     assert!(std::path::Path::new(nested_path).exists());
 
     fs::remove_dir_all("tmp_rovodev_a").ok();
@@ -368,7 +397,7 @@ fn test_list_empty_directory() {
         path: test_dir.to_string(),
     };
 
-    let result = list.execute();
+    let result = list.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
 
     fs::remove_dir_all(test_dir).ok();

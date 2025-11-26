@@ -23,7 +23,7 @@ fn test_tool_read_file() {
         path: test_file.to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("Test content"));
 
@@ -39,7 +39,7 @@ fn test_tool_write_file() {
         content: "Hello World!".to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(Path::new(test_file).exists());
 
@@ -59,7 +59,7 @@ fn test_tool_append_file() {
         content: "Appended content".to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
 
     let content = fs::read_to_string(test_file).unwrap();
@@ -80,7 +80,7 @@ fn test_tool_search_replace() {
         new_string: "Rust".to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
 
     let content = fs::read_to_string(test_file).unwrap();
@@ -98,7 +98,7 @@ fn test_tool_delete_file() {
         path: test_file.to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(!Path::new(test_file).exists());
 }
@@ -111,7 +111,7 @@ fn test_tool_create_directory() {
         path: test_dir.to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(Path::new(test_dir).is_dir());
 
@@ -130,7 +130,7 @@ fn test_tool_list_files() {
         path: test_dir.to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     let output = result.unwrap();
     assert!(output.contains("file1.txt"));
@@ -151,7 +151,7 @@ fn test_tool_list_files_recursive() {
         path: test_dir.to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     let output = result.unwrap();
     assert!(output.contains("file1.txt"));
@@ -166,7 +166,7 @@ fn test_tool_run_command() {
         command: "echo 'Hello from test'".to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("Hello from test"));
 }
@@ -178,7 +178,7 @@ fn test_tool_execute_code_python() {
         code: "print('Python test')".to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     // Python might not be available in all test environments
     if result.is_ok() {
         assert!(result.unwrap().contains("Python test"));
@@ -192,7 +192,7 @@ fn test_tool_execute_code_bash() {
         code: "echo 'Bash test'".to_string(),
     };
 
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("Bash test"));
 }
@@ -202,7 +202,7 @@ fn test_tool_execute_code_bash() {
 #[test]
 fn test_tool_git_status() {
     let tool = Tool::GitStatus;
-    let result = tool.execute();
+    let result = tool.execute(&rust_tui_coder::config::WebConfig::default());
     // Git might not be available or this might not be a git repo
     assert!(result.is_ok());
 }

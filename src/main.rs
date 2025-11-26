@@ -279,7 +279,7 @@ async fn run_app<B: Backend>(
                                     // Run the agent with access to the shared app state
                                     // The agent will handle its own locking/unlocking to allow UI updates
                                     let result = agent_clone
-                                        .run(&config_clone.llm, user_input_clone, app_clone)
+                                        .run(&config_clone, user_input_clone, app_clone)
                                         .await;
                                     result
                                 }));

@@ -5,6 +5,20 @@ use std::io;
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub llm: LlmConfig,
+    #[serde(default)]
+    pub web: WebConfig,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct WebConfig {
+    #[serde(default = "default_provider")]
+    pub provider: String,
+    #[allow(dead_code)]
+    pub api_key: Option<String>,
+}
+
+fn default_provider() -> String {
+    "duckduckgo".to_string()
 }
 
 #[derive(Deserialize, Debug, Clone)]

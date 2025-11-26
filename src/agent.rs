@@ -1,4 +1,4 @@
-use crate::config::LlmConfig;
+use crate::config::WebConfig;
 use crate::llm::Message;
 use futures_util::StreamExt;
 use regex::Regex;
@@ -74,6 +74,19 @@ impl ToolCall {
                 let pattern = self.parameters.get("pattern")?.as_str()?.to_string();
                 Some(Tool::GlobSearch { pattern })
             }
+            "READ_URL" => {
+                let url = self.parameters.get("url")?.as_str()?.to_string();
+                Some(Tool::ReadUrl { url })
+            }
+            "SEARCH_WEB" => {
+                let query = self.parameters.get("query")?.as_str()?.to_string();
+                Some(Tool::SearchWeb { query })
+            }
+            "REMEMBER" => {
+                let fact = self.parameters.get("fact")?.as_str()?.to_string();
+                Some(Tool::Remember { fact })
+            }
+            "RECALL" => Some(Tool::Recall),
             "INDEX_CODEBASE" => {
                 let path = self.parameters.get("path")?.as_str()?.to_string();
                 Some(Tool::IndexCodebase { path })
@@ -232,6 +245,16 @@ pub enum Tool {
         pattern: String,
         path: Option<String>,
     },
+    ReadUrl {
+        url: String,
+    },
+    SearchWeb {
+        query: String,
+    },
+    Remember {
+        fact: String,
+    },
+    Recall,
 
     // Code Execution & Compilation
     ExecuteCode {
@@ -298,7 +321,7 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub fn execute(&self) -> Result<String, io::Error> {
+    pub fn execute(&self, web_config: &WebConfig) -> Result<String, io::Error> {
         match self {
             // File Operations
             Tool::ReadFile { path } => {
@@ -433,6 +456,91 @@ impl Tool {
                     }
                 } else {
                     Ok(format!("Failed to search files in '{}'", search_path))
+                }
+            }
+            Tool::ReadUrl { url } => {
+                let response = reqwest::blocking::get(url)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to fetch URL: {}", e)))?;
+                if !response.status().is_success() {
+                    return Err(io::Error::new(io::ErrorKind::Other, format!("HTTP Error: {}", response.status())));
+                }
+                let html = response.text()
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to read response text: {}", e)))?;
+                let text = html2text::from_read(html.as_bytes(), 80);
+                Ok(format!("Content of {}:\n\n{}", url, text))
+            }
+            Tool::SearchWeb { query } => {
+                // Default to DuckDuckGo HTML scraper for free access
+                // In a real production app, we would use a proper API like Tavily or Google Custom Search
+                // if configured.
+                let provider = web_config.provider.to_lowercase();
+                if provider == "duckduckgo" {
+                     let url = format!("https://html.duckduckgo.com/html/?q={}", urlencoding::encode(query));
+                     let client = reqwest::blocking::Client::builder()
+                        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                        .build()
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+                     let response = client.get(&url).send()
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to search: {}", e)))?;
+
+                     if !response.status().is_success() {
+                         return Err(io::Error::new(io::ErrorKind::Other, format!("Search failed with status: {}", response.status())));
+                     }
+
+                     let html = response.text()
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                     // Simple parsing for DDG HTML (this is brittle but works for basic scraping)
+                     // We look for class="result__a"
+                     let regex = Regex::new(r#"class="result__a"\s+href="([^"]+)">([^<]+)</a>"#).unwrap();
+                     let mut results = Vec::new();
+                     for cap in regex.captures_iter(&html).take(5) {
+                         let link = &cap[1];
+                         let title = &cap[2];
+                         // DDG links are often wrapped in /l/?kh=-1&uddg=...
+                         let clean_link = if let Some(idx) = link.find("uddg=") {
+                             urlencoding::decode(&link[idx+5..]).unwrap_or(std::borrow::Cow::Borrowed(link)).to_string()
+                         } else {
+                             link.to_string()
+                         };
+                         results.push(format!("- [{}]({})", title, clean_link));
+                     }
+
+                     if results.is_empty() {
+                         // Fallback to text conversion if regex fails (DDG layout might have changed)
+                         let text = html2text::from_read(html.as_bytes(), 80);
+                         Ok(format!("Search results for '{}' (raw text):\n\n{}", query, text.chars().take(1000).collect::<String>()))
+                     } else {
+                         Ok(format!("Search results for '{}':\n\n{}", query, results.join("\n")))
+                     }
+                } else {
+                    Ok(format!("Provider '{}' not yet implemented. Please use 'duckduckgo'.", provider))
+                }
+            }
+
+            Tool::Remember { fact } => {
+                let memory_file = ".agent_memory.md";
+                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+                let entry = format!("\n## [{}]\n{}\n", timestamp, fact);
+
+                if Path::new(memory_file).exists() {
+                    let mut file = fs::OpenOptions::new().append(true).open(memory_file)?;
+                    use std::io::Write;
+                    file.write_all(entry.as_bytes())?;
+                } else {
+                    fs::write(memory_file, format!("# Agent Memory\n{}", entry))?;
+                }
+
+                Ok(format!("Remembered: '{}' (saved to {})", fact, memory_file))
+            }
+
+            Tool::Recall => {
+                let memory_file = ".agent_memory.md";
+                if Path::new(memory_file).exists() {
+                    let content = fs::read_to_string(memory_file)?;
+                    Ok(format!("Project Memory:\n\n{}", content))
+                } else {
+                    Ok("No project memory found. Use REMEMBER to save important facts.".to_string())
                 }
             }
 
@@ -1191,9 +1299,13 @@ The tool will execute automatically and you will receive the result. Then you ca
 14. **FUZZY_FIND** `<pattern> [path]` - Fuzzy search for file paths (e.g. "user" matches "src/user_model.rs")
 15. **INDEX_CODEBASE** `<path>` - Scan directory and build a symbol index (functions, classes)
 16. **SEARCH_INDEX** `<query>` - Search the built index for symbols
+17. **READ_URL** `<url>` - Fetch and read the content of a web page
+18. **SEARCH_WEB** `<query>` - Search the web for information (default: DuckDuckGo)
+19. **REMEMBER** `<fact>` - Save an important fact or decision to project memory (.agent_memory.md)
+20. **RECALL** - Retrieve all saved project memory
 
 ### Code Execution & Compilation
-15. **EXECUTE_CODE** `<language> <code>` - Execute code in multiple languages:
+21. **EXECUTE_CODE** `<language> <code>` - Execute code in multiple languages:
     - Python (python, py)
     - JavaScript/Node.js (javascript, js, node)
     - Bash/Shell (bash, sh)
@@ -1201,41 +1313,41 @@ The tool will execute automatically and you will receive the result. Then you ca
     - Go (go)
     - Java (java)
     - C/C++ (c, cpp, c++)
-15. **RUN_COMMAND** `<command>` - Execute shell commands with full environment access
+22. **RUN_COMMAND** `<command>` - Execute shell commands with full environment access
 
 ### Development Workflow
-16. **GIT_STATUS** - Show git repository status
-17. **GIT_DIFF** - Show unstaged changes
-18. **GIT_COMMIT** `<message>` - Commit changes with message
-19. **GIT_LOG** `[count]` - Show recent commit history
+23. **GIT_STATUS** - Show git repository status
+24. **GIT_DIFF** - Show unstaged changes
+25. **GIT_COMMIT** `<message>` - Commit changes with message
+26. **GIT_LOG** `[count]` - Show recent commit history
 
 ### Quality Assurance
-20. **RUN_LINT** `<language> [path]` - Run linters for code quality:
+27. **RUN_LINT** `<language> [path]` - Run linters for code quality:
     - Rust: cargo clippy
     - Python: flake8/pylint
     - JavaScript: eslint
     - Go: golangci-lint
-21. **RUN_TESTS** `<framework> [path]` - Run test suites:
+28. **RUN_TESTS** `<framework> [path]` - Run test suites:
     - Rust: cargo test
     - Python: pytest/unittest
     - JavaScript: jest/mocha
     - Go: go test
 
 ### Package Management
-22. **INSTALL_PACKAGE** `<manager> <package>` - Install packages:
+29. **INSTALL_PACKAGE** `<manager> <package>` - Install packages:
     - npm install <package>
     - cargo add <package>
     - pip install <package>
     - go get <package>
 
 ### System Information
-23. **GET_TIME** - Get current date, time, and timezone information from the system
-24. **GET_OS_INFO** - Get operating system details (OS type, architecture, shell, path separators)
+30. **GET_TIME** - Get current date, time, and timezone information from the system
+31. **GET_OS_INFO** - Get operating system details (OS type, architecture, shell, path separators)
 
 ### Enhanced File Operations
-25. **COPY_FILE** `<source> <destination>` - Copy a file from source to destination
-26. **MOVE_FILE** `<source> <destination>` - Move/relocate a file or directory
-27. **RENAME_FILE** `<old_name> <new_name>` - Rename a file or directory
+32. **COPY_FILE** `<source> <destination>` - Copy a file from source to destination
+33. **MOVE_FILE** `<source> <destination>` - Move/relocate a file or directory
+34. **RENAME_FILE** `<old_name> <new_name>` - Rename a file or directory
 
 ## PLANNING WORKFLOW - REQUIRED FOR COMPLEX TASKS
 
@@ -1430,25 +1542,30 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
 # Linux/Mac: ls, cp, mv, rm
 ```
 
+
 ## CRITICAL GUIDELINES
 
 - **PLAN FIRST for complex tasks** - Always use CREATE_PLAN as your FIRST tool call for tasks requiring 3+ steps
 - **ALWAYS use tools** - Never describe actions without executing them
 - **Use JSON format** - Prefer `TOOL: {{"name": "TOOL_NAME", "parameters": {{...}}}}` over legacy format
 - **Execute immediately** - Do not explain what you would do, just call the tool
-- **One tool per response** - Call one tool, wait for result, then continue
+- **WORK UNTIL COMPLETE** - After each tool result, immediately determine the next action and execute it. Continue this loop until the user's request is fully satisfied. Do NOT stop after just one tool call.
 - **No placeholders** - Never write text like "[Tool executes]" or "[Result will appear]"
 - **Verify work** - Read files after writing, list directories after changes
 - **Handle errors gracefully** - Try alternative approaches when tools fail
 - **Be precise** - Use exact string matching for SEARCH_REPLACE
 - **Think systematically** - Plan before acting, verify after completion
 - **Code quality matters** - Use linters and tests to maintain standards
-- **Use ReAct pattern** - Always REASON before you ACT, then OBSERVE the results
+- **Use ReAct pattern** - REASON (think about what to do next) → ACT (execute tool) → OBSERVE (check result) → REPEAT until task is complete
 - **Check OS compatibility** - Use GET_OS_INFO when executing OS-specific commands
-- **AUTONOMOUS EXECUTION** - You must ALWAYS execute the tool. Never ask the user for permission to run a tool unless explicitly told to do so.
+- **AUTONOMOUS EXECUTION** - You must ALWAYS execute tools. Never ask the user for permission to run a tool unless explicitly told to do so. Keep executing tools in sequence until the user's request is fully complete.
 - **Leverage time awareness** - Use GET_TIME when timestamps or scheduling matters
 
-**REMEMBER: For complex tasks, your FIRST response MUST contain CREATE_PLAN. For simple tasks, use tools directly. Your responses should contain actual tool calls that will be executed, not descriptions of tool usage.**{}
+**REMEMBER:
+1. For complex tasks, your FIRST response MUST contain CREATE_PLAN. For simple tasks, use tools directly.
+2. Your responses should contain actual tool calls that will be executed, not descriptions of tool usage.
+3. MOST IMPORTANTLY: After receiving a tool result, IMMEDIATELY proceed with the next step. Do not wait for user input. Continue working through the task until it is COMPLETE.
+**{}
 "#,
             custom_prompt
         )
@@ -1576,6 +1693,16 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                         "SEARCH_INDEX" => Some(Tool::SearchIndex {
                             query: params.to_string(),
                         }),
+                        "READ_URL" => Some(Tool::ReadUrl {
+                            url: params.to_string(),
+                        }),
+                        "SEARCH_WEB" => Some(Tool::SearchWeb {
+                            query: params.to_string(),
+                        }),
+                        "REMEMBER" => Some(Tool::Remember {
+                            fact: params.to_string(),
+                        }),
+                        "RECALL" => Some(Tool::Recall),
                         "GIT_STATUS" => Some(Tool::GitStatus),
                         "GIT_DIFF" => Some(Tool::GitDiff),
                         "GIT_COMMIT" => Some(Tool::GitCommit {
@@ -1637,6 +1764,41 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                             }
                         }
                         "CLEAR_PLAN" => Some(Tool::ClearPlan),
+                        "GET_TIME" => Some(Tool::GetTime),
+                        "GET_OS_INFO" => Some(Tool::GetOsInfo),
+                        "COPY_FILE" => {
+                            let parts: Vec<&str> = params.splitn(2, ' ').collect();
+                            if parts.len() == 2 {
+                                Some(Tool::CopyFile {
+                                    source: parts[0].to_string(),
+                                    destination: parts[1].to_string(),
+                                })
+                            } else {
+                                None
+                            }
+                        }
+                        "MOVE_FILE" => {
+                            let parts: Vec<&str> = params.splitn(2, ' ').collect();
+                            if parts.len() == 2 {
+                                Some(Tool::MoveFile {
+                                    source: parts[0].to_string(),
+                                    destination: parts[1].to_string(),
+                                })
+                            } else {
+                                None
+                            }
+                        }
+                        "RENAME_FILE" => {
+                            let parts: Vec<&str> = params.splitn(2, ' ').collect();
+                            if parts.len() == 2 {
+                                Some(Tool::RenameFile {
+                                    old_name: parts[0].to_string(),
+                                    new_name: parts[1].to_string(),
+                                })
+                            } else {
+                                None
+                            }
+                        }
                         _ => None,
                     };
                 }
@@ -1647,7 +1809,7 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
 
     pub async fn run(
         &mut self,
-        config: &LlmConfig,
+        config: &crate::config::Config,
         user_prompt: String,
         app: Arc<Mutex<crate::app::App>>,
     ) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
@@ -1656,7 +1818,7 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
 
     pub async fn run_with_streaming(
         &mut self,
-        config: &LlmConfig,
+        config: &crate::config::Config,
         user_prompt: String,
         app: Arc<Mutex<crate::app::App>>,
     ) -> Result<(String, Vec<String>), Box<dyn std::error::Error + Send + Sync>> {
@@ -1732,7 +1894,9 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
             let mut full_response = String::new();
 
             // Get streaming response from LLM
-            let mut stream = match crate::llm::stream_llm_response(config, &self.messages).await {
+            let mut stream = match crate::llm::stream_llm_response(&config.llm, &self.messages)
+                .await
+            {
                 Ok(stream) => stream,
                 Err(e) => {
                     let mut app_guard = app.lock().await;
@@ -1793,6 +1957,12 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                     Tool::FuzzyFind { pattern, path: _ } => format!("FUZZY_FIND {}", pattern),
                     Tool::IndexCodebase { path } => format!("INDEX_CODEBASE {}", path),
                     Tool::SearchIndex { query } => format!("SEARCH_INDEX {}", query),
+                    Tool::ReadUrl { url } => format!("READ_URL {}", url),
+                    Tool::SearchWeb { query } => format!("SEARCH_WEB '{}'", query),
+                    Tool::Remember { fact } => {
+                        format!("REMEMBER ({})", fact.chars().take(50).collect::<String>())
+                    }
+                    Tool::Recall => "RECALL".to_string(),
                     Tool::ExecuteCode { language, code: _ } => format!("EXECUTE_CODE {}", language),
                     Tool::RunCommand { command } => format!("RUN_COMMAND {}", command),
                     Tool::GitStatus => "GIT_STATUS".to_string(),
@@ -1831,7 +2001,7 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                 tool_logs.push(format!("[ATTEMPT {}] Executing {}", attempts, tool_name));
 
                 // Execute the tool
-                let tool_result = match tool.execute() {
+                let tool_result = match tool.execute(&config.web) {
                     Ok(result) => {
                         {
                             let mut app_guard = app.lock().await;
@@ -1863,7 +2033,7 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                 if attempts >= MAX_ATTEMPTS {
                     // Get final response after max attempts (non-streaming for final response)
                     let (final_response, final_tokens) =
-                        crate::llm::ask_llm_with_messages(config, &self.messages).await?;
+                        crate::llm::ask_llm_with_messages(&config.llm, &self.messages).await?;
                     {
                         let mut app_guard = app.lock().await;
                         app_guard.increment_tokens(final_tokens);

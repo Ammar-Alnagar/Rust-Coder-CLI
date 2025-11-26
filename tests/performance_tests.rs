@@ -56,7 +56,9 @@ fn test_large_file_operations() {
         path: test_file.to_string(),
         content: large_content.clone(),
     };
-    assert!(write.execute().is_ok());
+    assert!(write
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let write_elapsed = start.elapsed();
 
@@ -65,7 +67,7 @@ fn test_large_file_operations() {
     };
 
     let read_start = Instant::now();
-    let result = read.execute();
+    let result = read.execute(&rust_tui_coder::config::WebConfig::default());
     let read_elapsed = read_start.elapsed();
 
     assert!(result.is_ok());
@@ -147,7 +149,9 @@ fn test_directory_with_many_files() {
             path: format!("{}/file{}.txt", test_dir, i),
             content: format!("Content {}", i),
         };
-        write.execute().ok();
+        write
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .ok();
     }
 
     let start = Instant::now();
@@ -155,7 +159,7 @@ fn test_directory_with_many_files() {
     let list = Tool::ListFiles {
         path: test_dir.to_string(),
     };
-    let result = list.execute();
+    let result = list.execute(&rust_tui_coder::config::WebConfig::default());
 
     let elapsed = start.elapsed();
 
@@ -183,7 +187,9 @@ fn test_recursive_directory_listing_performance() {
                     path: format!("{}/file{}.txt", dir_path, file),
                     content: "content".to_string(),
                 };
-                write.execute().ok();
+                write
+                    .execute(&rust_tui_coder::config::WebConfig::default())
+                    .ok();
             }
         }
     }
@@ -193,7 +199,7 @@ fn test_recursive_directory_listing_performance() {
     let list = Tool::ListFilesRecursive {
         path: test_dir.to_string(),
     };
-    let result = list.execute();
+    let result = list.execute(&rust_tui_coder::config::WebConfig::default());
 
     let elapsed = start.elapsed();
 

@@ -1,4 +1,5 @@
 use crate::app::App;
+use once_cell::sync::Lazy;
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style, Stylize},
@@ -6,6 +7,87 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
     Frame,
 };
+use syntect::easy::HighlightLines;
+use syntect::highlighting::{Style as SyntectStyle, ThemeSet};
+use syntect::parsing::SyntaxSet;
+
+// Global syntax highlighting resources
+static SYNTAX_SET: Lazy<SyntaxSet> = Lazy::new(SyntaxSet::load_defaults_newlines);
+static THEME_SET: Lazy<ThemeSet> = Lazy::new(ThemeSet::load_defaults);
+
+// Convert syntect color to ratatui color
+fn syntect_to_ratatui_color(color: syntect::highlighting::Color) -> Color {
+    Color::Rgb(color.r, color.g, color.b)
+}
+
+// Parse a message and extract code blocks with syntax highlighting
+fn parse_message_with_highlighting(text: &str, max_width: usize) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    let mut in_code_block = false;
+    let mut code_buffer: Vec<String> = Vec::new();
+    let mut code_language = String::new();
+
+    for line in text.lines() {
+        if line.starts_with("```") {
+            if in_code_block {
+                // End of code block - highlight and flush
+                let theme = &THEME_SET.themes["base16-ocean.dark"];
+                let syntax = SYNTAX_SET
+                    .find_syntax_by_token(&code_language)
+                    .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+
+                let mut highlighter = HighlightLines::new(syntax, theme);
+
+                for code_line in &code_buffer {
+                    let ranges: Vec<(SyntectStyle, &str)> = highlighter
+                        .highlight_line(code_line, &SYNTAX_SET)
+                        .unwrap_or_default();
+
+                    let mut spans = Vec::new();
+                    for (style, text) in ranges {
+                        spans.push(Span::styled(
+                            text.to_string(),
+                            Style::default().fg(syntect_to_ratatui_color(style.foreground)),
+                        ));
+                    }
+                    lines.push(Line::from(spans));
+                }
+
+                code_buffer.clear();
+                in_code_block = false;
+            } else {
+                // Start of code block
+                in_code_block = true;
+                code_language = line.trim_start_matches("```").trim().to_string();
+                if code_language.is_empty() {
+                    code_language = "txt".to_string();
+                }
+            }
+        } else if in_code_block {
+            code_buffer.push(line.to_string());
+        } else {
+            // Regular text - wrap it
+            for wrapped_line in wrap_text(line, max_width) {
+                lines.push(Line::from(vec![Span::styled(
+                    wrapped_line,
+                    Style::default().fg(Color::White),
+                )]));
+            }
+        }
+    }
+
+    // Handle unclosed code block
+    if in_code_block && !code_buffer.is_empty() {
+        for code_line in &code_buffer {
+            lines.push(Line::from(vec![Span::styled(
+                code_line.clone(),
+                Style::default().fg(Color::Gray),
+            )]));
+        }
+    }
+
+    lines
+}
 
 // Enhanced helper function to wrap text to fit within a given width
 fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
@@ -116,36 +198,30 @@ pub fn ui(f: &mut Frame, app: &App) {
     // Add all conversation messages
     for message in &app.conversation {
         if let Some(content) = message.strip_prefix("User: ") {
-            let wrapped_content = wrap_text(content, max_width.saturating_sub(6)); // Account for "User: " prefix
+            // Add user prefix
+            conversation_lines.push(Line::from(vec![Span::styled(
+                "User: ",
+                Style::default().fg(Color::Blue).bold(),
+            )]));
 
-            for (i, line) in wrapped_content.iter().enumerate() {
-                if i == 0 {
-                    conversation_lines.push(Line::from(vec![
-                        Span::styled("User: ", Style::default().fg(Color::Blue).bold()),
-                        Span::styled(line.clone(), Style::default().fg(Color::White)),
-                    ]));
-                } else {
-                    conversation_lines.push(Line::from(vec![
-                        Span::styled("      ", Style::default().fg(Color::Blue)), // Indent continuation
-                        Span::styled(line.clone(), Style::default().fg(Color::White)),
-                    ]));
-                }
+            // Parse and highlight the content
+            let content_lines =
+                parse_message_with_highlighting(content, max_width.saturating_sub(6));
+            for line in content_lines {
+                conversation_lines.push(line);
             }
         } else if let Some(content) = message.strip_prefix("Agent: ") {
-            let wrapped_content = wrap_text(content, max_width.saturating_sub(7)); // Account for "Agent: " prefix
+            // Add agent prefix
+            conversation_lines.push(Line::from(vec![Span::styled(
+                "Agent: ",
+                Style::default().fg(Color::Green).bold(),
+            )]));
 
-            for (i, line) in wrapped_content.iter().enumerate() {
-                if i == 0 {
-                    conversation_lines.push(Line::from(vec![
-                        Span::styled("Agent: ", Style::default().fg(Color::Green).bold()),
-                        Span::styled(line.clone(), Style::default().fg(Color::White)),
-                    ]));
-                } else {
-                    conversation_lines.push(Line::from(vec![
-                        Span::styled("       ", Style::default().fg(Color::Green)), // Indent continuation
-                        Span::styled(line.clone(), Style::default().fg(Color::White)),
-                    ]));
-                }
+            // Parse and highlight the content
+            let content_lines =
+                parse_message_with_highlighting(content, max_width.saturating_sub(7));
+            for line in content_lines {
+                conversation_lines.push(line);
             }
         } else {
             let wrapped_message = wrap_text(message, max_width);

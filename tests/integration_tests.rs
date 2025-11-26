@@ -11,20 +11,24 @@ fn test_integration_file_workflow() {
     let create_dir = Tool::CreateDirectory {
         path: test_dir.to_string(),
     };
-    assert!(create_dir.execute().is_ok());
+    assert!(create_dir
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Write file
     let write_file = Tool::WriteFile {
         path: test_file.clone(),
         content: "Initial content".to_string(),
     };
-    assert!(write_file.execute().is_ok());
+    assert!(write_file
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Read file
     let read_file = Tool::ReadFile {
         path: test_file.clone(),
     };
-    let result = read_file.execute();
+    let result = read_file.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     assert!(result.unwrap().contains("Initial content"));
 
@@ -33,13 +37,15 @@ fn test_integration_file_workflow() {
         path: test_file.clone(),
         content: "\nAppended content".to_string(),
     };
-    assert!(append_file.execute().is_ok());
+    assert!(append_file
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Read again
     let read_file2 = Tool::ReadFile {
         path: test_file.clone(),
     };
-    let result2 = read_file2.execute();
+    let result2 = read_file2.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result2.is_ok());
     let content = result2.unwrap();
     assert!(content.contains("Initial content"));
@@ -51,13 +57,15 @@ fn test_integration_file_workflow() {
         old_string: "Initial".to_string(),
         new_string: "Modified".to_string(),
     };
-    assert!(search_replace.execute().is_ok());
+    assert!(search_replace
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Verify replacement
     let read_file3 = Tool::ReadFile {
         path: test_file.clone(),
     };
-    let result3 = read_file3.execute();
+    let result3 = read_file3.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result3.is_ok());
     assert!(result3.unwrap().contains("Modified content"));
 
@@ -115,17 +123,25 @@ fn test_integration_plan_workflow() {
             "Step 3: Verify".to_string(),
         ],
     };
-    assert!(create_plan.execute().is_ok());
+    assert!(create_plan
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Update plan for each step
     let update_step1 = Tool::UpdatePlan { completed_step: 1 };
-    assert!(update_step1.execute().is_ok());
+    assert!(update_step1
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let update_step2 = Tool::UpdatePlan { completed_step: 2 };
-    assert!(update_step2.execute().is_ok());
+    assert!(update_step2
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     let update_step3 = Tool::UpdatePlan { completed_step: 3 };
-    assert!(update_step3.execute().is_ok());
+    assert!(update_step3
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
 
     // Verify all steps are completed
     let content = fs::read_to_string("plan.md").unwrap();
@@ -133,7 +149,9 @@ fn test_integration_plan_workflow() {
 
     // Clear the plan
     let clear_plan = Tool::ClearPlan;
-    assert!(clear_plan.execute().is_ok());
+    assert!(clear_plan
+        .execute(&rust_tui_coder::config::WebConfig::default())
+        .is_ok());
     assert!(!std::path::Path::new("plan.md").exists());
 }
 
@@ -174,14 +192,16 @@ fn test_integration_multiple_file_operations() {
             path: format!("{}/file{}.txt", test_dir, i),
             content: format!("Content {}", i),
         };
-        assert!(write_tool.execute().is_ok());
+        assert!(write_tool
+            .execute(&rust_tui_coder::config::WebConfig::default())
+            .is_ok());
     }
 
     // List files
     let list_tool = Tool::ListFiles {
         path: test_dir.to_string(),
     };
-    let result = list_tool.execute();
+    let result = list_tool.execute(&rust_tui_coder::config::WebConfig::default());
     assert!(result.is_ok());
     let output = result.unwrap();
 
