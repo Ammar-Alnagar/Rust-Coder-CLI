@@ -149,7 +149,7 @@ pub struct App {
 │ Conversation Area (70% height)         │
 │ • User messages                         │
 │ • Agent responses                       │
-│ • Scrollable with ↑↓                    │
+│ • Scrollable with UpDown                    │
 └─────────────────────────────────────────┘
 ┌─────────────────────────────────────────┐
 │ Tool Logs Area (20% height)            │

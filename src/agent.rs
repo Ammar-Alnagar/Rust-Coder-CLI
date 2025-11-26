@@ -685,6 +685,9 @@ impl Tool {
                 use std::time::SystemTime;
                 let now = SystemTime::now();
                 let datetime = chrono::Local::now();
+                let unix_timestamp = now.duration_since(SystemTime::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("System time is before UNIX epoch: {}", e)))?;
                 Ok(format!(
                     "Current Date & Time:\n\
                      • Date: {}\n\
@@ -694,9 +697,7 @@ impl Tool {
                     datetime.format("%Y-%m-%d"),
                     datetime.format("%H:%M:%S"),
                     datetime.format("%Z"),
-                    now.duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
+                    unix_timestamp
                 ))
             }
 
@@ -768,13 +769,11 @@ impl Tool {
 
     // Helper methods for code execution
     fn execute_python(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!(
-            "/tmp/temp_code_{}.py",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let temp_file = format!("/tmp/temp_code_{}.py", timestamp);
         fs::write(&temp_file, code)?;
         let output = Command::new("python3").arg(&temp_file).output()?;
         let _ = fs::remove_file(temp_file);
@@ -789,13 +788,11 @@ impl Tool {
     }
 
     fn execute_javascript(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!(
-            "/tmp/temp_code_{}.js",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let temp_file = format!("/tmp/temp_code_{}.js", timestamp);
         fs::write(&temp_file, code)?;
         let output = Command::new("node").arg(&temp_file).output()?;
         let _ = fs::remove_file(temp_file);
@@ -822,13 +819,11 @@ impl Tool {
     }
 
     fn execute_rust(code: &str) -> Result<String, io::Error> {
-        let temp_dir = format!(
-            "/tmp/rust_code_{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let temp_dir = format!("/tmp/rust_code_{}", timestamp);
         fs::create_dir_all(&temp_dir)?;
         let main_rs = format!("{}/src/main.rs", temp_dir);
         let cargo_toml = format!("{}/Cargo.toml", temp_dir);
@@ -859,13 +854,11 @@ edition = "2021"
     }
 
     fn execute_go(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!(
-            "/tmp/temp_code_{}.go",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let temp_file = format!("/tmp/temp_code_{}.go", timestamp);
         fs::write(&temp_file, format!("package main\n\n{}", code))?;
         let output = Command::new("go").arg("run").arg(&temp_file).output()?;
         let _ = fs::remove_file(temp_file);
@@ -880,13 +873,11 @@ edition = "2021"
     }
 
     fn execute_java(code: &str) -> Result<String, io::Error> {
-        let temp_file = format!(
-            "/tmp/temp_code_{}.java",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let temp_file = format!("/tmp/temp_code_{}.java", timestamp);
         let class_name = "TempCode";
         let full_code = format!("public class {} {{\n    public static void main(String[] args) {{\n        {}\n    }}\n}}", class_name, code);
         fs::write(&temp_file, full_code)?;
@@ -919,21 +910,12 @@ edition = "2021"
     fn execute_c_cpp(code: &str, language: &str) -> Result<String, io::Error> {
         let is_cpp = matches!(language.to_lowercase().as_str(), "cpp" | "c++");
         let extension = if is_cpp { "cpp" } else { "c" };
-        let temp_source = format!(
-            "/tmp/temp_code_{}.{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            extension
-        );
-        let temp_exe = format!(
-            "/tmp/temp_exe_{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let temp_source = format!("/tmp/temp_code_{}.{}", timestamp, extension);
+        let temp_exe = format!("/tmp/temp_exe_{}", timestamp);
 
         let full_code = if is_cpp {
             format!(
@@ -1001,7 +983,7 @@ impl Agent {
         format!(
             r#"You are an advanced AI coding assistant with comprehensive access to development tools. You excel at software development, debugging, and project management. You MUST use tools to complete tasks - never just describe what you would do.
 
-## ReAct PATTERN: REASON → ACT → OBSERVE
+## ReAct PATTERN: REASON -> ACT -> OBSERVE
 
 **You MUST follow the ReAct (Reasoning + Acting) pattern for all tasks:**
 
@@ -1012,11 +994,11 @@ impl Agent {
 **Example ReAct Pattern:**
 ```
 REASONING: I need to understand the project structure before making changes. Let me list the files first.
-ACTION: TOOL: {{"name": "LIST_FILES", "parameters": {{"path": "."}}}}
-[Tool executes and returns result]
-OBSERVATION: I can see there's a src/ directory with main.rs. Now I'll read it to understand the current implementation.
-ACTION: TOOL: {{"name": "READ_FILE", "parameters": {{"path": "src/main.rs"}}}}
+
+TOOL: {{"name": "LIST_FILES", "parameters": {{"path": "."}}}}
 ```
+
+The tool will execute automatically and you will receive the result. Then you can reason about the result and take the next action.
 
 **CRITICAL FIRST STEP: For complex tasks requiring 3+ steps or multiple components, ALWAYS start with CREATE_PLAN as your very first tool call. Do not execute any other tools until the plan is created.**
 
@@ -1132,17 +1114,17 @@ ACTION: TOOL: {{"name": "READ_FILE", "parameters": {{"path": "src/main.rs"}}}}
 ```
 User Request Received
 ├── Is it a simple task? (1-2 steps, single file)
-│   ├── YES → Use tools directly (READ_FILE, WRITE_FILE, etc.)
-│   └── NO → Continue to planning
+│   ├── YES -> Use tools directly (READ_FILE, WRITE_FILE, etc.)
+│   └── NO -> Continue to planning
 └── Is it a complex task? (3+ steps, multiple files/components)
-    ├── YES → CREATE_PLAN as FIRST tool call
-    └── NO → Use tools directly
+    ├── YES -> CREATE_PLAN as FIRST tool call
+    └── NO -> Use tools directly
 
 EXAMPLES:
-✅ Simple: "Read the main.rs file" → READ_FILE
-✅ Simple: "Change function name" → SEARCH_REPLACE
-❌ Complex: "Build a web app" → CREATE_PLAN first
-❌ Complex: "Add authentication" → CREATE_PLAN first
+Simple: "Read the main.rs file" -> READ_FILE
+Simple: "Change function name" -> SEARCH_REPLACE
+Complex: "Build a web app" -> CREATE_PLAN first
+Complex: "Add authentication" -> CREATE_PLAN first
 ```
 
 **CRITICAL: If you receive a complex task, your FIRST tool call MUST be CREATE_PLAN. Do not execute any other tools until the plan is created.**
@@ -1161,12 +1143,33 @@ TOOL: READ_FILE /path/to/file.txt
 TOOL: CREATE_PLAN "Task description" "Step 1" "Step 2" "Step 3"
 ```
 
-**CRITICAL: You must output the tool call EXACTLY as shown above. Do NOT describe what you would do - actually call the tools!**
+**CRITICAL RULES FOR TOOL EXECUTION:**
+1. Put ONLY the tool call on a line starting with "TOOL:"
+2. Do NOT add "ACTION:" or any prefix before "TOOL:"
+3. Do NOT show placeholder text like "[Tool executes and returns result]"
+4. The tool will execute automatically - you don't need to describe the execution
+5. After the tool executes, you will receive the result and can reason about it
+
+**CORRECT:**
+```
+TOOL: {{"name": "GET_TIME", "parameters": {{}}}}
+```
+
+**INCORRECT:**
+```
+ACTION: TOOL: {{"name": "GET_TIME", "parameters": {{}}}}
+```
+
+**INCORRECT:**
+```
+TOOL: {{"name": "GET_TIME", "parameters": {{}}}}
+[Tool executes and returns result]
+```
 
 ## CODING WORKFLOW PRINCIPLES
 
 ### 1. Task Assessment Phase
-- **Determine task complexity**: If task requires 3+ steps or multiple files → USE CREATE_PLAN
+- **Determine task complexity**: If task requires 3+ steps or multiple files -> USE CREATE_PLAN
 - **Assess scope**: Single file changes = direct tools, multi-component tasks = planning required
 
 ### 2. Exploration Phase
@@ -1258,6 +1261,8 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
 - **ALWAYS use tools** - Never describe actions without executing them
 - **Use JSON format** - Prefer `TOOL: {{"name": "TOOL_NAME", "parameters": {{...}}}}` over legacy format
 - **Execute immediately** - Do not explain what you would do, just call the tool
+- **One tool per response** - Call one tool, wait for result, then continue
+- **No placeholders** - Never write text like "[Tool executes]" or "[Result will appear]"
 - **Verify work** - Read files after writing, list directories after changes
 - **Handle errors gracefully** - Try alternative approaches when tools fail
 - **Be precise** - Use exact string matching for SEARCH_REPLACE
@@ -1631,7 +1636,7 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                         format!("RENAME_FILE {} -> {}", old_name, new_name)
                     }
                 };
-                tool_logs.push(format!("🔧 Attempt {}: Executing {}", attempts, tool_name));
+                tool_logs.push(format!("[ATTEMPT {}] Executing {}", attempts, tool_name));
 
                 // Execute the tool
                 let tool_result = match tool.execute() {
@@ -1640,11 +1645,11 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                             let mut app_guard = app.lock().await;
                             app_guard.increment_tools_executed();
                         }
-                        tool_logs.push(format!("✅ Success: {}", result));
+                        tool_logs.push(format!("[SUCCESS] {}", result));
                         result
                     }
                     Err(e) => {
-                        let error_msg = format!("❌ Error: {}", e);
+                        let error_msg = format!("[ERROR] {}", e);
                         tool_logs.push(error_msg.clone());
                         format!("Tool failed: {}. Please try a different approach or check if the path/command is correct.", e)
                     }
@@ -1678,7 +1683,10 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                         content: final_response.clone(),
                     });
 
-                    all_tool_logs.push(format!("⚠️  Reached maximum attempts ({})", MAX_ATTEMPTS));
+                    all_tool_logs.push(format!(
+                        "[WARNING] Reached maximum attempts ({})",
+                        MAX_ATTEMPTS
+                    ));
                     return Ok((final_response, all_tool_logs));
                 }
 
@@ -1692,7 +1700,10 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                 });
 
                 if attempts > 1 {
-                    all_tool_logs.push(format!("✅ Task completed after {} attempts", attempts));
+                    all_tool_logs.push(format!(
+                        "[COMPLETE] Task completed after {} attempts",
+                        attempts
+                    ));
                 }
 
                 {

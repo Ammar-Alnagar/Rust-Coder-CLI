@@ -24,13 +24,13 @@ Rust TUI Coder is an intelligent terminal-based coding assistant that leverages 
 
 ### Key Highlights
 
-- 🤖 **AI-Powered**: Works with OpenAI, Anthropic, or local LLM providers
-- 🎨 **Beautiful TUI**: Modern terminal interface with real-time updates
-- 🔧 **27+ Tools**: Comprehensive toolset for development tasks
-- 🧠 **ReAct Pattern**: Intelligent reasoning before acting
-- 🌍 **Cross-Platform**: Works on Linux, macOS, and Windows
-- ⚡ **Performance**: Built with Rust for speed and reliability
-- 📝 **Custom Prompts**: Optional prompt.md for personalized instructions
+-  **AI-Powered**: Works with OpenAI, Anthropic, or local LLM providers
+-  **Beautiful TUI**: Modern terminal interface with real-time updates
+-  **27+ Tools**: Comprehensive toolset for development tasks
+-  **ReAct Pattern**: Intelligent reasoning before acting
+-  **Cross-Platform**: Works on Linux, macOS, and Windows
+-  **Performance**: Built with Rust for speed and reliability
+-  **Custom Prompts**: Optional prompt.md for personalized instructions
 
 ## Features
 
@@ -113,7 +113,7 @@ rust_tui_coder
 - **Type your request** and press Enter to interact with the AI
 - **/quit** - Exit the application (shows usage summary)
 - **/stats** - Display current session statistics
-- **↑↓** - Scroll through conversation
+- **UpDown** - Scroll through conversation
 - **PgUp/PgDn** - Page up/down
 - **Home/End** - Jump to top/bottom
 
@@ -318,4 +318,4 @@ at your option.
 
 ---
 
-**Built with ❤️ using Rust 🦀**
+**Built with  using Rust **

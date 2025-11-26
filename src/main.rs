@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if input.trim().to_lowercase() == "y" {
             create_default_config()?;
             eprintln!();
-            eprintln!("✓ Created config.toml with default values.");
+            eprintln!("Created config.toml with default values.");
             eprintln!();
             eprintln!("IMPORTANT: Please edit config.toml and set your LLM configuration:");
             eprintln!("  - api_key: Your API key");
@@ -211,6 +211,16 @@ async fn run_app<B: Backend>(
                                 let mut app_guard = app.lock().await;
                                 app_guard.scroll_conversation_to_bottom();
                             }
+                            KeyCode::Left => {
+                                // Scroll tool logs up
+                                let mut app_guard = app.lock().await;
+                                app_guard.scroll_tool_logs_up();
+                            }
+                            KeyCode::Right => {
+                                // Scroll tool logs down
+                                let mut app_guard = app.lock().await;
+                                app_guard.scroll_tool_logs_down();
+                            }
                             KeyCode::Enter => {
                                 // Don't process new input if there's already an agent task running
                                 if current_agent_task.is_some() {
@@ -255,7 +265,7 @@ async fn run_app<B: Backend>(
                                     let mut app_guard = app.lock().await;
                                     app_guard.conversation.push(format!("User: {}", user_input));
                                     app_guard.status_message =
-                                        "🤔 Thinking... (streaming response will appear live)"
+                                        "Thinking... (streaming response will appear live)"
                                             .to_string();
                                     terminal.draw(|f| ui::ui(f, &app_guard))?;
                                 }

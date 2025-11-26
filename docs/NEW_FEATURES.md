@@ -2,7 +2,7 @@
 
 This document highlights the new features added in version 0.3.0 of Rust TUI Coder.
 
-## 🧠 ReAct Pattern: Reasoning Before Acting
+##  ReAct Pattern: Reasoning Before Acting
 
 The AI now follows the **ReAct (Reasoning + Acting)** pattern, which means it explicitly thinks through problems before taking action.
 
@@ -33,7 +33,7 @@ ACTION: TOOL: {"name": "CREATE_PLAN", "parameters": {...}}
 
 ---
 
-## 🌍 OS Detection & Cross-Platform Adaptation
+##  OS Detection & Cross-Platform Adaptation
 
 The assistant now automatically detects your operating system and adapts its behavior accordingly.
 
@@ -81,7 +81,7 @@ rmdir /s directory\    # Delete directory
 
 ---
 
-## ⏰ Time & Date Awareness
+##  Time & Date Awareness
 
 The AI can now access the current date and time from your system.
 
@@ -119,7 +119,7 @@ Successfully copied 'config.json' to 'config.json.2024-01-15.backup'
 
 ---
 
-## 📁 Enhanced File Operations
+##  Enhanced File Operations
 
 Three new tools for better file management:
 
@@ -174,7 +174,7 @@ Successfully renamed 'old-project-name' to 'new-project-name'
 
 ---
 
-## 📝 Custom System Prompts (prompt.md)
+##  Custom System Prompts (prompt.md)
 
 You can now customize the AI's behavior by creating a `prompt.md` file in your working directory.
 
@@ -232,7 +232,7 @@ TypeScript for the frontend and PostgreSQL for the database.
 
 ---
 
-## 📚 Improved Documentation
+##  Improved Documentation
 
 New comprehensive documentation added:
 
@@ -265,7 +265,7 @@ Version history and migration guides:
 
 ---
 
-## 🔧 Technical Improvements
+##  Technical Improvements
 
 ### Under the Hood
 
@@ -278,13 +278,13 @@ Version history and migration guides:
 ### System Requirements
 
 No new requirements! Works on:
-- ✅ Linux (all distributions)
-- ✅ macOS (Intel and Apple Silicon)
-- ✅ Windows 10/11
+-  Linux (all distributions)
+-  macOS (Intel and Apple Silicon)
+-  Windows 10/11
 
 ---
 
-## 🚀 Migration from v0.2.x
+##  Migration from v0.2.x
 
 Upgrading is seamless - no breaking changes!
 
@@ -302,7 +302,7 @@ rust_tui_coder
 
 ---
 
-## 💡 Quick Start with New Features
+##  Quick Start with New Features
 
 ### Try ReAct Pattern
 
@@ -353,7 +353,7 @@ rust_tui_coder
 
 ---
 
-## 📖 Learn More
+##  Learn More
 
 - **[Complete README](README_FULL.md)** - Everything in one place
 - **[ReAct Pattern Guide](REACT_PATTERN.md)** - Deep dive into reasoning
@@ -363,8 +363,8 @@ rust_tui_coder
 
 ---
 
-## 🎯 What's Next?
+##  What's Next?
 
 See [CHANGELOG.md](../CHANGELOG.md) for planned features in future releases!
 
-**Enjoy the enhanced Rust TUI Coder! 🦀✨**
+**Enjoy the enhanced Rust TUI Coder! **

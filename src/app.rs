@@ -29,7 +29,7 @@ impl App {
             user_input: String::new(),
             conversation: Vec::new(),
             status_message:
-                "Commands: /quit, /stats | Keys: ↑↓ (scroll), PgUp/PgDn (page), Home/End (top/bottom)".to_string(),
+                "Commands: /quit, /stats | Keys: Up/Down (scroll chat), Left/Right (scroll logs), PgUp/PgDn, Home/End".to_string(),
             tool_logs: Vec::new(),
             is_executing_tool: false,
             current_tool: String::new(),
@@ -116,11 +116,24 @@ impl App {
         self.conversation_scroll_position = usize::MAX; // Set to max, will be clamped in UI
     }
 
+    // Tool log scroll management methods
+    pub fn scroll_tool_logs_up(&mut self) {
+        if self.tool_logs_scroll_position > 0 {
+            self.tool_logs_scroll_position -= 1;
+        }
+    }
+
+    pub fn scroll_tool_logs_down(&mut self) {
+        if self.tool_logs_scroll_position < usize::MAX - 1 {
+            self.tool_logs_scroll_position += 1;
+        }
+    }
+
     // Streaming state management
     pub fn start_streaming(&mut self) {
         self.is_streaming = true;
         self.current_streaming_message = String::new();
-        self.status_message = "🤔 Thinking... (streaming response)".to_string();
+        self.status_message = "Thinking... (streaming response)".to_string();
     }
 
     pub fn update_streaming_message(&mut self, new_content: &str) {
@@ -133,7 +146,7 @@ impl App {
         }
         self.is_streaming = false;
         self.current_streaming_message = String::new();
-        self.status_message = "✅ Done.".to_string();
+        self.status_message = "Done.".to_string();
         self.scroll_conversation_to_bottom();
     }
 }

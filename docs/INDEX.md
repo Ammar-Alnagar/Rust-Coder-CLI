@@ -2,9 +2,9 @@
 
 Welcome to the Rust TUI Coder documentation! This index helps you find the information you need.
 
-**🆕 NEW in v0.3.0**: ReAct pattern, OS detection, time tools, custom prompts, and enhanced file operations!
+** NEW in v0.3.0**: ReAct pattern, OS detection, time tools, custom prompts, and enhanced file operations!
 
-## 📚 Documentation Overview
+##  Documentation Overview
 
 ### For New Users
 
@@ -41,7 +41,7 @@ Documentation for project maintenance:
 
 ---
 
-## 📖 Quick Navigation
+##  Quick Navigation
 
 ### By Topic
 
@@ -89,37 +89,37 @@ Documentation for project maintenance:
 
 ---
 
-## 🎯 Find What You Need
+##  Find What You Need
 
 ### "I want to..."
 
 #### ...get started
-→ [GETTING_STARTED.md](GETTING_STARTED.md)
+-> [GETTING_STARTED.md](GETTING_STARTED.md)
 
 #### ...see examples of what I can do
-→ [EXAMPLES.md](EXAMPLES.md)
+-> [EXAMPLES.md](EXAMPLES.md)
 
 #### ...fix a problem
-→ [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+-> [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
 #### ...understand how it works
-→ [ARCHITECTURE.md](ARCHITECTURE.md)
+-> [ARCHITECTURE.md](ARCHITECTURE.md)
 
 #### ...look up API details
-→ [API.md](API.md)
+-> [API.md](API.md)
 
 #### ...contribute code
-→ [CONTRIBUTING.md](CONTRIBUTING.md)
+-> [CONTRIBUTING.md](CONTRIBUTING.md)
 
 #### ...run tests
-→ [TESTING.md](TESTING.md)
+-> [TESTING.md](TESTING.md)
 
 #### ...publish the package
-→ [PUBLISH.md](PUBLISH.md)
+-> [PUBLISH.md](PUBLISH.md)
 
 ---
 
-## 📋 Document Summaries
+##  Document Summaries
 
 ### [README.md](README.md)
 **Purpose:** Main project documentation  
@@ -355,7 +355,7 @@ A: See [API Reference](API.md)
 
 ---
 
-## 📊 Documentation Statistics
+##  Documentation Statistics
 
 - **Total Documents:** 10
 - **Total Lines:** ~5,000+
@@ -380,7 +380,7 @@ A: See [API Reference](API.md)
 
 ---
 
-## 💡 Documentation Tips
+##  Documentation Tips
 
 ### For Readers
 
@@ -400,7 +400,7 @@ A: See [API Reference](API.md)
 
 ---
 
-## 📞 Support
+##  Support
 
 - **Documentation Issues:** Open a GitHub issue
 - **Suggestions:** Submit a pull request
@@ -408,7 +408,7 @@ A: See [API Reference](API.md)
 
 ---
 
-## 🎓 Additional Resources
+##  Additional Resources
 
 ### External Links
 
@@ -426,7 +426,7 @@ A: See [API Reference](API.md)
 
 ---
 
-**Happy Learning! 🦀✨**
+**Happy Learning! **
 
 Last Updated: 2024  
 Version: 1.0.0
