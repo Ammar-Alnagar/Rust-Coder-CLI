@@ -145,7 +145,7 @@ You'll see a terminal interface with:
 | Key | Action |
 |-----|--------|
 | `Enter` | Send message |
-| `↑` / `↓` | Scroll conversation |
+| `Up` / `Down` | Scroll conversation |
 | `PgUp` / `PgDn` | Page up/down |
 | `Home` | Scroll to top |
 | `End` | Scroll to bottom |
@@ -250,8 +250,8 @@ Tool execution is shown in the **Tool Logs** area.
 
 ### 1. Be Specific
 
-❌ "Make a website"
-✅ "Create an HTML file with a form that collects name and email"
+ "Make a website"
+ "Create an HTML file with a form that collects name and email"
 
 ### 2. Break Down Complex Tasks
 
@@ -311,7 +311,7 @@ Type `/stats` to see:
 
 ### Scroll Through History
 
-- Use **↑/↓** to scroll through conversation
+- Use **Up/Down** to scroll through conversation
 - Use **PgUp/PgDn** for faster scrolling
 - Use **Home/End** to jump to top/bottom
 
@@ -433,4 +433,4 @@ A: Python, Bash, Node.js, and Ruby are supported out of the box.
 - **Features**: Suggest features via GitHub issues
 - **Documentation**: All docs are in the `docs/` folder
 
-Happy coding! 🦀✨
+Happy coding! 

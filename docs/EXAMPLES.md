@@ -626,12 +626,12 @@ Read all .txt files in the docs/ folder and create a combined.txt with all their
 ## Tips for Best Results
 
 ### Be Specific
-❌ "Make it better"
-✅ "Add input validation and error messages to the login form"
+ "Make it better"
+ "Add input validation and error messages to the login form"
 
 ### Provide Context
-❌ "Fix the bug"
-✅ "The calculate_total function returns NaN when the cart is empty. Fix this."
+ "Fix the bug"
+ "The calculate_total function returns NaN when the cart is empty. Fix this."
 
 ### Work Iteratively
 Instead of asking for everything at once, work step-by-step and refine as you go.

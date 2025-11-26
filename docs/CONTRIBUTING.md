@@ -629,4 +629,4 @@ Contributors will be:
 - Mentioned in release notes
 - Acknowledged in project README
 
-Thank you for contributing to Rust TUI Coder! 🦀✨
+Thank you for contributing to Rust TUI Coder! 

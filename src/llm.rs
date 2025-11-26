@@ -257,7 +257,7 @@ pub async fn stream_llm_response(
                 // SSE format: "data: {...}\n\n"
                 // Process ALL data lines in this chunk, not just the first one
                 let mut collected_content = String::new();
-                
+
                 for line in chunk_str.lines() {
                     if let Some(data_line) = line.strip_prefix("data: ") {
                         if data_line == "[DONE]" {
@@ -279,7 +279,7 @@ pub async fn stream_llm_response(
                         }
                     }
                 }
-                
+
                 Ok(collected_content)
             }
             Err(e) => Err(LlmError::RequestFailed(e)),

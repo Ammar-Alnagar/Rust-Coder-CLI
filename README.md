@@ -1,14 +1,14 @@
 # Rust TUI Coder
 
-> **📖 Documentation has been reorganized into the `docs/` folder for better organization.**
+> ** Documentation has been reorganized into the `docs/` folder for better organization.**
 
-**[View Complete README →](docs/README_FULL.md)**
+**[View Complete README ->](docs/README_FULL.md)**
 
 ---
 
 ## Quick Links
 
-### 📚 Documentation
+###  Documentation
 - **[Complete README](docs/README_FULL.md)** - Full project documentation
 - **[Documentation Index](docs/INDEX.md)** - Navigation guide for all docs
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Installation and setup
@@ -28,7 +28,7 @@
 
 ---
 
-## ⚡ Quick Start
+##  Quick Start
 
 ### Installation
 
@@ -55,18 +55,18 @@ rust_tui_coder
 
 ---
 
-## ✨ What is Rust TUI Coder?
+##  What is Rust TUI Coder?
 
 A powerful terminal-based AI coding assistant that brings AI intelligence directly to your command line. Built with Rust for performance and reliability.
 
 ### Key Features
 
-- 💬 **Natural Language Interface** - Chat with AI about your code
-- 🔧 **Direct Tool Execution** - AI manipulates files and runs commands
-- 📊 **Real-time Monitoring** - Watch tool execution in real-time
-- 🎨 **Beautiful TUI** - Modern terminal interface with ratatui
-- 🚀 **Multiple LLM Support** - OpenAI, Anthropic, or local models
-- ⚡ **Fast & Efficient** - Built with Rust for performance
+-  **Natural Language Interface** - Chat with AI about your code
+-  **Direct Tool Execution** - AI manipulates files and runs commands
+-  **Real-time Monitoring** - Watch tool execution in real-time
+-  **Beautiful TUI** - Modern terminal interface with ratatui
+-  **Multiple LLM Support** - OpenAI, Anthropic, or local models
+-  **Fast & Efficient** - Built with Rust for performance
 
 ### Quick Example
 
@@ -81,7 +81,7 @@ AI: I'll create the script and execute it...
 
 ---
 
-## 🛠️ Available Tools
+##  Available Tools
 
 - **File Operations**: read, write, append, search/replace, delete
 - **Directory Operations**: create, list, recursive list
@@ -91,7 +91,7 @@ AI: I'll create the script and execute it...
 
 ---
 
-## 📖 Documentation Structure
+##  Documentation Structure
 
 The documentation is organized in the `docs/` folder:
 
@@ -115,13 +115,13 @@ docs/
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 📄 License
+##  License
 
 Licensed under either of:
 
@@ -140,4 +140,4 @@ at your option.
 
 ---
 
-**Happy Coding! 🦀✨**
+**Happy Coding! **

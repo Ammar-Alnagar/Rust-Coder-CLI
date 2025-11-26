@@ -430,8 +430,8 @@ pwd
    ```
 
 2. **Use compatible terminal**
-   - ✅ Good: iTerm2, GNOME Terminal, Alacritty, Windows Terminal
-   - ❌ Poor: Basic terminals, old terminal emulators
+   -  Good: iTerm2, GNOME Terminal, Alacritty, Windows Terminal
+   -  Poor: Basic terminals, old terminal emulators
 
 3. **Check terminal capabilities**
    ```bash
@@ -481,7 +481,7 @@ pwd
 **Solutions:**
 
 1. **Use correct keys**
-   - `↑` / `↓`: Line by line
+   - `Up` / `Down`: Line by line
    - `PgUp` / `PgDn`: Page by page
    - `Home` / `End`: Top / Bottom
 
