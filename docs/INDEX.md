@@ -2,6 +2,8 @@
 
 Welcome to the Rust TUI Coder documentation! This index helps you find the information you need.
 
+**🆕 NEW in v0.3.0**: ReAct pattern, OS detection, time tools, custom prompts, and enhanced file operations!
+
 ## 📚 Documentation Overview
 
 ### For New Users
