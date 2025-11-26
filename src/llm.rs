@@ -255,29 +255,32 @@ pub async fn stream_llm_response(
                 let chunk_str = String::from_utf8_lossy(&bytes);
 
                 // SSE format: "data: {...}\n\n"
-                if let Some(data_line) = chunk_str
-                    .lines()
-                    .find(|line| line.starts_with("data: "))
-                    .and_then(|line| line.strip_prefix("data: "))
-                {
-                    if data_line == "[DONE]" {
-                        Ok("".to_string()) // End of stream
-                    } else {
-                        // Parse the JSON chunk
-                        match serde_json::from_str::<ChatCompletionStreamResponse>(data_line) {
-                            Ok(parsed) => {
-                                if let Some(choice) = parsed.choices.first() {
-                                    Ok(choice.delta.content.clone().unwrap_or_default())
-                                } else {
-                                    Ok("".to_string())
+                // Process ALL data lines in this chunk, not just the first one
+                let mut collected_content = String::new();
+                
+                for line in chunk_str.lines() {
+                    if let Some(data_line) = line.strip_prefix("data: ") {
+                        if data_line == "[DONE]" {
+                            continue; // End of stream marker
+                        } else if !data_line.is_empty() {
+                            // Parse the JSON chunk
+                            match serde_json::from_str::<ChatCompletionStreamResponse>(data_line) {
+                                Ok(parsed) => {
+                                    if let Some(choice) = parsed.choices.first() {
+                                        if let Some(content) = &choice.delta.content {
+                                            collected_content.push_str(content);
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    // Skip unparseable chunks silently
                                 }
                             }
-                            Err(_) => Ok("".to_string()), // Skip unparseable chunks
                         }
                     }
-                } else {
-                    Ok("".to_string())
                 }
+                
+                Ok(collected_content)
             }
             Err(e) => Err(LlmError::RequestFailed(e)),
         }
