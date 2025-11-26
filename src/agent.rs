@@ -1,7 +1,9 @@
 use crate::config::LlmConfig;
 use crate::llm::Message;
 use futures_util::StreamExt;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io;
@@ -71,6 +73,23 @@ impl ToolCall {
             "GLOB_SEARCH" => {
                 let pattern = self.parameters.get("pattern")?.as_str()?.to_string();
                 Some(Tool::GlobSearch { pattern })
+            }
+            "INDEX_CODEBASE" => {
+                let path = self.parameters.get("path")?.as_str()?.to_string();
+                Some(Tool::IndexCodebase { path })
+            }
+            "SEARCH_INDEX" => {
+                let query = self.parameters.get("query")?.as_str()?.to_string();
+                Some(Tool::SearchIndex { query })
+            }
+            "FUZZY_FIND" => {
+                let pattern = self.parameters.get("pattern")?.as_str()?.to_string();
+                let path = self
+                    .parameters
+                    .get("path")
+                    .and_then(|p| p.as_str())
+                    .map(|s| s.to_string());
+                Some(Tool::FuzzyFind { pattern, path })
             }
             "EXECUTE_CODE" => {
                 let language = self.parameters.get("language")?.as_str()?.to_string();
@@ -202,6 +221,16 @@ pub enum Tool {
     },
     GlobSearch {
         pattern: String,
+    },
+    IndexCodebase {
+        path: String,
+    },
+    SearchIndex {
+        query: String,
+    },
+    FuzzyFind {
+        pattern: String,
+        path: Option<String>,
     },
 
     // Code Execution & Compilation
@@ -358,7 +387,7 @@ impl Tool {
             Tool::GrepSearch { pattern, path } => {
                 let search_path = path.as_ref().map(|s| s.as_str()).unwrap_or(".");
                 let mut cmd = Command::new("grep");
-                cmd.arg("-r").arg("-n").arg(pattern).arg(search_path);
+                cmd.arg("-r").arg("-n").arg("-i").arg(pattern).arg(search_path);
                 let output = cmd.output()?;
 
                 if output.status.success() {
@@ -381,6 +410,141 @@ impl Tool {
                     Ok(format!("Files matching '{}':\n{}", pattern, files_vec.join("\n")))
                 } else {
                     Ok(format!("No files found matching pattern '{}'", pattern))
+                }
+            }
+            Tool::FuzzyFind { pattern, path } => {
+                let search_path = path.as_ref().map(|s| s.as_str()).unwrap_or(".");
+                let mut cmd = Command::new("find");
+                cmd.arg(search_path).arg("-type").arg("f");
+                let output = cmd.output()?;
+
+                if output.status.success() {
+                    let stdout_str = String::from_utf8_lossy(&output.stdout);
+                    let pattern_lower = pattern.to_lowercase();
+                    let files_vec: Vec<_> = stdout_str
+                        .lines()
+                        .filter(|line| !line.is_empty())
+                        .filter(|line| line.to_lowercase().contains(&pattern_lower))
+                        .collect();
+                    if files_vec.is_empty() {
+                        Ok(format!("No files found matching fuzzy pattern '{}' in '{}'", pattern, search_path))
+                    } else {
+                        Ok(format!("Files matching fuzzy pattern '{}':\n{}", pattern, files_vec.join("\n")))
+                    }
+                } else {
+                    Ok(format!("Failed to search files in '{}'", search_path))
+                }
+            }
+
+            Tool::IndexCodebase { path } => {
+                let root_path = Path::new(path);
+                if !root_path.exists() {
+                    return Err(io::Error::new(io::ErrorKind::NotFound, format!("Path '{}' does not exist", path)));
+                }
+
+                let mut index_data: HashMap<String, Vec<String>> = HashMap::new();
+                let mut file_count = 0;
+                let mut symbol_count = 0;
+
+                // Regex patterns for different languages
+                let rust_fn = Regex::new(r"fn\s+([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
+                let rust_struct = Regex::new(r"(struct|enum|trait)\s+([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
+                let py_def = Regex::new(r"def\s+([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
+                let py_class = Regex::new(r"class\s+([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
+                let js_func = Regex::new(r"(?:function\s+([a-zA-Z_][a-zA-Z0-9_]*)|([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*function)").unwrap();
+                let js_class = Regex::new(r"class\s+([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
+                let js_const = Regex::new(r"(?:const|let|var)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*=").unwrap();
+
+                fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&Path)) -> io::Result<()> {
+                    if dir.is_dir() {
+                        for entry in fs::read_dir(dir)? {
+                            let entry = entry?;
+                            let path = entry.path();
+                            if path.is_dir() {
+                                if !path.file_name().unwrap().to_string_lossy().starts_with('.') {
+                                     visit_dirs(&path, cb)?;
+                                }
+                            } else {
+                                cb(&path);
+                            }
+                        }
+                    }
+                    Ok(())
+                }
+                visit_dirs(root_path, &mut |file_path| {
+                    if let Ok(content) = fs::read_to_string(file_path) {
+                        let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                        let file_str = file_path.to_string_lossy().to_string();
+                        let mut symbols = Vec::new();
+                        match ext {
+                            "rs" => {
+                                for cap in rust_fn.captures_iter(&content) {
+                                    symbols.push(format!("Function: {}", &cap[1]));
+                                }
+                                for cap in rust_struct.captures_iter(&content) {
+                                    symbols.push(format!("{}: {}", &cap[1], &cap[2]));
+                                }
+                            },
+                            "py" => {
+                                for cap in py_def.captures_iter(&content) {
+                                    symbols.push(format!("Function: {}", &cap[1]));
+                                }
+                                for cap in py_class.captures_iter(&content) {
+                                    symbols.push(format!("Class: {}", &cap[1]));
+                                }
+                            },
+                            "js" | "ts" | "jsx" | "tsx" => {
+                                for cap in js_func.captures_iter(&content) {
+                                    if let Some(name) = cap.get(1).or(cap.get(2)) {
+                                        symbols.push(format!("Function: {}", name.as_str()));
+                                    }
+                                }
+                                for cap in js_class.captures_iter(&content) {
+                                    symbols.push(format!("Class: {}", &cap[1]));
+                                }
+                                for cap in js_const.captures_iter(&content) {
+                                    symbols.push(format!("Variable: {}", &cap[1]));
+                                }
+                            },
+                            _ => {}
+                        }
+
+                        if !symbols.is_empty() {
+                            index_data.insert(file_str, symbols);
+                            file_count += 1;
+                            symbol_count += index_data.values().last().unwrap().len();
+                        }
+                    }
+                })?;
+
+                // Save index to file
+                let json = serde_json::to_string_pretty(&index_data).unwrap();
+                fs::write(".agent_index.json", json)?;
+
+                Ok(format!("Indexed {} files and found {} symbols. Index saved to .agent_index.json", file_count, symbol_count))
+            }
+
+            Tool::SearchIndex { query } => {
+                if !Path::new(".agent_index.json").exists() {
+                    return Ok("Index not found. Please run INDEX_CODEBASE first.".to_string());
+                }
+                let content = fs::read_to_string(".agent_index.json")?;
+                let index: HashMap<String, Vec<String>> = serde_json::from_str(&content).unwrap_or_default();
+                let query_lower = query.to_lowercase();
+                let mut results = Vec::new();
+                for (file, symbols) in index {
+                    for symbol in symbols {
+                        if symbol.to_lowercase().contains(&query_lower) {
+                            results.push(format!("{} -> {}", symbol, file));
+                        }
+                    }
+                }
+
+                if results.is_empty() {
+                    Ok(format!("No symbols found matching '{}'", query))
+                } else {
+                    results.sort();
+                    Ok(format!("Found {} matches for '{}':\n{}", results.len(), query, results.join("\n")))
                 }
             }
 
@@ -1022,11 +1186,14 @@ The tool will execute automatically and you will receive the result. Then you ca
 11. **CREATE_DIRECTORY** `<path>` - Create directories (recursive)
 
 ### Search & Navigation
-12. **GREP_SEARCH** `<pattern> [path]` - Search for text patterns using ripgrep (fast, regex support)
+12. **GREP_SEARCH** `<pattern> [path]` - Search for text patterns using ripgrep (fast, regex support, case-insensitive)
 13. **GLOB_SEARCH** `<pattern>` - Find files matching glob patterns (*.rs, **/test/**, etc.)
+14. **FUZZY_FIND** `<pattern> [path]` - Fuzzy search for file paths (e.g. "user" matches "src/user_model.rs")
+15. **INDEX_CODEBASE** `<path>` - Scan directory and build a symbol index (functions, classes)
+16. **SEARCH_INDEX** `<query>` - Search the built index for symbols
 
 ### Code Execution & Compilation
-14. **EXECUTE_CODE** `<language> <code>` - Execute code in multiple languages:
+15. **EXECUTE_CODE** `<language> <code>` - Execute code in multiple languages:
     - Python (python, py)
     - JavaScript/Node.js (javascript, js, node)
     - Bash/Shell (bash, sh)
@@ -1175,31 +1342,38 @@ TOOL: {{"name": "GET_TIME", "parameters": {{}}}}
 ### 2. Exploration Phase
 - Always start with LIST_FILES to understand project structure
 - Use GLOB_SEARCH to find relevant files (*.rs for Rust, *.py for Python, etc.)
+- Use FUZZY_FIND to locate files by partial name (e.g. "user" -> "src/user_model.rs")
 - READ_FILE key configuration files (Cargo.toml, package.json, requirements.txt, etc.)
 
-### 3. Planning Phase (MANDATORY for complex tasks)
+### 3. Code Understanding Phase
+- Use GREP_SEARCH to find code definitions, references, or TODOs
+- Use FUZZY_FIND to jump to specific files
+- READ_FILE to examine the code context and logic
+- Analyze the code structure before making changes
+
+### 4. Planning Phase (MANDATORY for complex tasks)
 - **FIRST STEP**: Use CREATE_PLAN to break down the task
 - Break complex tasks into manageable steps
 - Identify dependencies and prerequisites
 - Plan file modifications before executing
 
-### 4. Implementation Phase
+### 5. Implementation Phase
 - Use SEARCH_REPLACE for precise edits (prefer over WRITE_FILE for modifications)
 - APPEND_FILE for adding to existing files
 - Verify changes with READ_FILE
 - Test modifications with EXECUTE_CODE or RUN_COMMAND
 
-### 5. Verification Phase
+### 6. Verification Phase
 - Use RUN_LINT to check code quality
 - Execute tests with RUN_TESTS
 - Build/compile with RUN_COMMAND
 - Verify functionality with EXECUTE_CODE
 
-### 6. Completion Phase
+### 7. Completion Phase
 - Use UPDATE_PLAN to mark steps as completed
 - Use CLEAR_PLAN when all steps are done
 
-### 7. Error Recovery
+### 8. Error Recovery
 - If SEARCH_REPLACE fails, check exact string matching
 - If EXECUTE_CODE fails, try RUN_COMMAND with compilation
 - If RUN_COMMAND fails, simplify the command or check permissions
@@ -1220,6 +1394,7 @@ TOOL: {{"name": "SEARCH_REPLACE", "parameters": {{"path": "src/main.rs", "old_st
 ### Development Tasks:
 TOOL: {{"name": "LIST_FILES", "parameters": {{"path": "."}}}}
 TOOL: {{"name": "GREP_SEARCH", "parameters": {{"pattern": "TODO|FIXME", "path": "src/"}}}}
+TOOL: {{"name": "FUZZY_FIND", "parameters": {{"pattern": "main", "path": "src/"}}}}
 TOOL: {{"name": "EXECUTE_CODE", "parameters": {{"language": "rust", "code": "fn main() {{ println!(\"test\"); }}"}}}}
 TOOL: {{"name": "RUN_LINT", "parameters": {{"language": "rust"}}}}
 
@@ -1270,6 +1445,7 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
 - **Code quality matters** - Use linters and tests to maintain standards
 - **Use ReAct pattern** - Always REASON before you ACT, then OBSERVE the results
 - **Check OS compatibility** - Use GET_OS_INFO when executing OS-specific commands
+- **AUTONOMOUS EXECUTION** - You must ALWAYS execute the tool. Never ask the user for permission to run a tool unless explicitly told to do so.
 - **Leverage time awareness** - Use GET_TIME when timestamps or scheduling matters
 
 **REMEMBER: For complex tasks, your FIRST response MUST contain CREATE_PLAN. For simple tasks, use tools directly. Your responses should contain actual tool calls that will be executed, not descriptions of tool usage.**{}
@@ -1281,8 +1457,9 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
     fn parse_tool_call(&self, response: &str) -> Option<Tool> {
         let lines: Vec<&str> = response.lines().collect();
         for line in lines {
-            if line.starts_with("TOOL:") {
-                let tool_part = line[6..].trim();
+            let trimmed_line = line.trim();
+            if trimmed_line.starts_with("TOOL:") {
+                let tool_part = trimmed_line.strip_prefix("TOOL:").unwrap().trim();
 
                 // Try JSON format first
                 if tool_part.starts_with('{') {
@@ -1386,6 +1563,18 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                         }
                         "GLOB_SEARCH" => Some(Tool::GlobSearch {
                             pattern: params.to_string(),
+                        }),
+                        "FUZZY_FIND" => {
+                            let parts: Vec<&str> = params.splitn(2, ' ').collect();
+                            let pattern = parts[0].to_string();
+                            let path = parts.get(1).map(|s| s.to_string());
+                            Some(Tool::FuzzyFind { pattern, path })
+                        }
+                        "INDEX_CODEBASE" => Some(Tool::IndexCodebase {
+                            path: params.to_string(),
+                        }),
+                        "SEARCH_INDEX" => Some(Tool::SearchIndex {
+                            query: params.to_string(),
                         }),
                         "GIT_STATUS" => Some(Tool::GitStatus),
                         "GIT_DIFF" => Some(Tool::GitDiff),
@@ -1601,6 +1790,9 @@ TOOL: {{"name": "GET_OS_INFO", "parameters": {{}}}}
                     Tool::CreateDirectory { path } => format!("CREATE_DIRECTORY {}", path),
                     Tool::GrepSearch { pattern, path: _ } => format!("GREP_SEARCH {}", pattern),
                     Tool::GlobSearch { pattern } => format!("GLOB_SEARCH {}", pattern),
+                    Tool::FuzzyFind { pattern, path: _ } => format!("FUZZY_FIND {}", pattern),
+                    Tool::IndexCodebase { path } => format!("INDEX_CODEBASE {}", path),
+                    Tool::SearchIndex { query } => format!("SEARCH_INDEX {}", query),
                     Tool::ExecuteCode { language, code: _ } => format!("EXECUTE_CODE {}", language),
                     Tool::RunCommand { command } => format!("RUN_COMMAND {}", command),
                     Tool::GitStatus => "GIT_STATUS".to_string(),

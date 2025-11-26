@@ -1,6 +1,6 @@
 [package]
 name = "rust_tui_coder"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 description = "AI-powered terminal coding assistant with interactive TUI, supporting multiple LLMs and comprehensive development tools"
 license = "MIT OR Apache-2.0"
@@ -34,3 +34,4 @@ serde_json = "1.0.111"
 toml = "0.8.8"
 futures-util = "0.3.30"
 chrono = "0.4"
+regex = "1.12.2"
